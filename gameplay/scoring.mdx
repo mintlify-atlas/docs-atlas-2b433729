@@ -188,7 +188,7 @@ Judgements are the visual feedback labels shown above the strumline on each note
 
 ## End-of-Song Ranks
 
-After a song ends, `PlayState` collects tally data (`SaveScoreTallyData`) and passes it to `Scoring.calculateRank()` to determine the animated result screen rank.
+After a song ends, `PlayState` collects score data (`SaveScoreData`) and passes it to `Scoring.calculateRank()` to determine the animated result screen rank. `SaveScoreData` wraps a `SaveScoreTallyData` record (in `scoreData.tallies`) alongside the raw score integer.
 
 ### `Scoring.calculateRank`
 

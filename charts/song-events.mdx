@@ -132,8 +132,10 @@ Tweens the camera's zoom level to a new value, either relative to the stage zoom
 </ParamField>
 
 <ParamField path="ease" type="string (enum)">
-  Easing function. Accepts the same values as `FocusCamera` above, plus
-  `INSTANT` to skip the tween entirely. Default: `linear`.
+  Easing function. Accepts `INSTANT` to skip the tween entirely, or any
+  FlxEase function name: `linear`, `sine`, `quad`, `cube`, `quart`, `quint`,
+  `expo`, `smoothStep`, `smootherStep`, `elastic`, `back`, `bounce`, `circ`.
+  Default: `linear`.
 </ParamField>
 
 <ParamField path="easeDir" type="string (enum)">
@@ -190,8 +192,10 @@ Changes the speed at which notes travel down (or up) the strumlines. By default 
 </ParamField>
 
 <ParamField path="ease" type="string (enum)">
-  Easing function. Accepts the same FlxEase values as `FocusCamera`, plus
-  `INSTANT`. Default: `linear`.
+  Easing function. Accepts `INSTANT` to skip the tween entirely, or any
+  FlxEase function name: `linear`, `sine`, `quad`, `cube`, `quart`, `quint`,
+  `expo`, `smoothStep`, `smootherStep`, `elastic`, `back`, `bounce`, `circ`.
+  Default: `linear`.
 </ParamField>
 
 <ParamField path="easeDir" type="string (enum)">

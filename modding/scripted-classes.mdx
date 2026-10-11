@@ -8,14 +8,14 @@ Scripted classes are the heart of Friday Night Funkin's scripting system. They l
 
 ## How It Works
 
-When Polymod initialises, it scans every `.hxc` file in every enabled mod folder and parses them with the HScript interpreter. Each file is expected to declare exactly one class. Polymod registers those classes by name so the game can instantiate them later with a dedicated `init` factory method.
+When Polymod initialises, it scans every `.hxc` file in every enabled mod folder and parses them with the HScript interpreter. Each file is expected to declare exactly one class. Polymod registers those classes by name so the game can instantiate them later with a dedicated `scriptInit` factory method.
 
 ```haxe
 // Instantiate a scripted FlxSprite subclass called "MyFireEffect"
-var sprite = ScriptedFlxSprite.init('MyFireEffect', x, y);
+var sprite = ScriptedFlxSprite.scriptInit('MyFireEffect', x, y);
 ```
 
-The `init` pattern is the same for every scripted class family — the first argument is always the **class name string** as declared in your `.hxc` file.
+The `scriptInit` pattern is the same for every scripted class family — the first argument is always the **class name string** as declared in your `.hxc` file.
 
 ## IScriptedClass — The Base Interface
 
@@ -35,12 +35,12 @@ Specialised sub-interfaces extend this with domain-specific callbacks:
 
 | Interface | Extra callbacks |
 |---|---|
-| `IStateChangingScriptedClass` | `onStateChangeBegin/End`, `onSubStateOpen/CloseBegin/End`, `onFocusLost/Gained` |
+| `IStateChangingScriptedClass` | `onStateChangeBegin`, `onStateChangeEnd`, `onSubStateOpenBegin`, `onSubStateOpenEnd`, `onSubStateCloseBegin`, `onSubStateCloseEnd`, `onFocusLost`, `onFocusGained` |
 | `IPlayStateScriptedClass` | Note hit/miss, countdown, song start/end, game over, song events, BPM sync |
-| `IFreeplayScriptedClass` | Capsule selection, difficulty switch, song selection, freeplay open/close |
-| `ICharacterSelectScriptedClass` | Character select/deselect/confirm |
-| `IDialogueScriptedClass` | Dialogue start/line/complete/skip/end |
-| `IBPMSyncedScriptedClass` | `onStepHit`, `onBeatHit` |
+| `IFreeplayScriptedClass` | `onCapsuleSelected`, `onDifficultySwitch`, `onSongSelected`, `onFreeplayIntroDone`, `onFreeplayOutro`, `onFreeplayClose` |
+| `ICharacterSelectScriptedClass` | `onCharacterSelect`, `onCharacterDeselect`, `onCharacterConfirm` |
+| `IDialogueScriptedClass` | `onDialogueStart`, `onDialogueLine`, `onDialogueCompleteLine`, `onDialogueSkip`, `onDialogueEnd` |
+| `IBPMSyncedScriptedClass` | `onStepHit(SongTimeScriptEvent)`, `onBeatHit(SongTimeScriptEvent)` |
 | `INoteScriptedClass` | `onNoteIncoming`, `onNoteHit`, `onNoteMiss`, `onNoteHoldDrop` |
 
 ## ScriptedModule — Persistent Global Scripts
@@ -137,7 +137,7 @@ These scripted classes let you subclass core HaxeFlixel types in scripts. They l
 // In a Module or another scripted class:
 import funkin.modding.base.ScriptedFlxSprite;
 
-var mySprite = ScriptedFlxSprite.init('MyFireEffect', 100.0, 200.0);
+var mySprite = ScriptedFlxSprite.scriptInit('MyFireEffect', 100.0, 200.0);
 FlxG.state.add(mySprite);
 ```
 
@@ -202,7 +202,7 @@ class MyStage extends Stage
 
 Instantiated via:
 ```haxe
-var stage = ScriptedStage.init('MyStage', 'my-stage');
+var stage = ScriptedStage.scriptInit('MyStage', 'my-stage');
 ```
 
 ### ScriptedBopper
@@ -216,7 +216,7 @@ class MyCrowdMember extends Bopper
 {
   public function new()
   {
-    super(16); // bop every 16th note
+    super(1.0); // danceEvery: bob once per beat (1.0 = every beat)
   }
 }
 ```
@@ -278,12 +278,13 @@ Custom note lanes. Extend `Strumline` to override note rendering, hit detection,
 
 ```haxe
 import funkin.play.notes.Strumline;
+import funkin.play.notes.notestyle.NoteStyle;
 
 class MyStrumline extends Strumline
 {
-  public function new(ratingGroup, noteData, isPlayer, isGhost)
+  public function new(noteStyle:NoteStyle, isPlayer:Bool, ?scrollSpeed:Float)
   {
-    super(ratingGroup, noteData, isPlayer, isGhost);
+    super(noteStyle, isPlayer, scrollSpeed);
   }
 }
 ```
@@ -292,21 +293,21 @@ class MyStrumline extends Strumline
 
 ```haxe
 // Instantiate any scripted class by name:
-ScriptedFlxSprite.init('ClassName', ...constructorArgs);
-ScriptedFlxState.init('ClassName');
-ScriptedFlxSubState.init('ClassName');
-ScriptedFlxSpriteGroup.init('ClassName');
+ScriptedFlxSprite.scriptInit('ClassName', ...constructorArgs);
+ScriptedFlxState.scriptInit('ClassName');
+ScriptedFlxSubState.scriptInit('ClassName');
+ScriptedFlxSpriteGroup.scriptInit('ClassName');
 
-ScriptedSparrowCharacter.init('ClassName', 'charId');
-ScriptedStage.init('ClassName', 'stageId');
-ScriptedBopper.init('ClassName', beatsPerStep);
-ScriptedSong.init('ClassName', 'songId');
-ScriptedSongEvent.init('ClassName', 'EventType');
-ScriptedStrumline.init('ClassName', ratingGroup, noteData, isPlayer, isGhost);
+ScriptedSparrowCharacter.scriptInit('ClassName', 'charId');
+ScriptedStage.scriptInit('ClassName', 'stageId');
+ScriptedBopper.scriptInit('ClassName', danceEvery);
+ScriptedSong.scriptInit('ClassName', 'songId');
+ScriptedSongEvent.scriptInit('ClassName', 'EventType');
+ScriptedStrumline.scriptInit('ClassName', noteStyle, isPlayer);
 ```
 
 <Tip>
-  The class name you pass to `init()` must exactly match the class name declared in your `.hxc` file. Class names must be globally unique across all mods and the base game.
+  The class name you pass to `scriptInit()` must exactly match the class name declared in your `.hxc` file. Class names must be globally unique across all mods and the base game.
 </Tip>
 
 ## Further Reading

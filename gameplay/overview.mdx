@@ -85,7 +85,7 @@ var song:Song = SongRegistry.instance.fetchEntry('bopeebo');
 
 A `Song` holds metadata for every **variation** it supports (e.g. `"default"`, `"erect"`, `"pico"`) as a `Map<String, SongMetadata>`. Each variation then maps difficulty names to `SongDifficulty` objects, which carry the actual `SongChartData` (note data, scroll speed, events) and `SongOffsets`.
 
-```
+```text
 SongRegistry
  └── Song  (id = "bopeebo")
       ├── variation: "default"
@@ -138,7 +138,7 @@ enum abstract NoteDirection(Int) from Int to Int
 }
 ```
 
-Each value also exposes `.name` (lowercase string), `.nameUpper`, and `.color` (`FlxColor`) helpers.
+Each value also exposes `.name` (lowercase string), `.nameUpper` (uppercase string), `.color` (`FlxColor`), and `.colorName` (lowercase colour name string: `"purple"`, `"blue"`, `"green"`, or `"red"`) helpers.
 
 ---
 
@@ -176,6 +176,8 @@ typedef PlayStateParams =
   ?startTimestamp:Float,
   ?playbackRate:Float,
   ?overrideMusic:Bool,
+  ?cameraFollowPoint:FlxPoint,
+  ?mirrored:Bool,
 }
 ```
 
@@ -201,7 +203,7 @@ Key responsibilities of `PlayState`:
 
 ### Game Flow Diagram
 
-```
+```text
 MainMenuState
     ├── StoryModeState  →  PlayState  →  ResultState  →  StoryModeState
     └── FreeplayState   →  PlayState  →  ResultState  →  FreeplayState

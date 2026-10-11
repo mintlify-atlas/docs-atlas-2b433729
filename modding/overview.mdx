@@ -12,7 +12,7 @@ Friday Night Funkin' ships with a first-class modding system powered by [Polymod
 
 ## What is Polymod?
 
-Polymod is an atomic, Haxe-native modding library originally developed for [Defenders Quest II](https://github.com/larsiusprime/polymod). FNF integrates it via `PolymodHandler`, a wrapper that configures the framework at boot, feeds it the list of mods the player has enabled, and re-initialises it whenever assets need to be reloaded (for example, when pressing **F5** in debug builds).
+Polymod is an atomic, Haxe-native modding library originally developed for [Defenders Quest II](https://github.com/larsiusprime/polymod). FNF integrates it via `PolymodHandler`, a wrapper that configures the framework at boot, feeds it the full list of installed mods, and re-initialises it whenever assets need to be reloaded (for example, when `PolymodHandler.forceReloadAssets()` is triggered by pressing **F5** in debug builds).
 
 Polymod handles:
 
@@ -36,12 +36,13 @@ Polymod handles:
 
 ## How PolymodHandler Works
 
-When the game boots, `PolymodHandler.loadEnabledMods()` is called. It:
+When the game boots, `PolymodHandler.loadAllMods()` is called. It:
 
 1. Creates the `mods/` folder next to the executable if it does not yet exist.
-2. Calls `Polymod.scan()` to read each mod's `_polymod_meta.json` and filter out mods whose `api_version` is outside the supported range (`>=0.8.0 <0.9.0`).
-3. Calls `Polymod.init()` with the ordered list of mod directories, registering all `.hxc` scripted class files in the process.
-4. After Polymod initialises, all game registries (songs, characters, stages, events, …) are reloaded so they pick up data contributed by mods.
+2. Calls `Polymod.init()` with the ordered list of mod directories, registering all `.hxc` scripted class files in the process.
+3. After Polymod initialises, all game registries (songs, characters, stages, events, …) are reloaded so they pick up data contributed by mods.
+
+`Polymod.scan()` is used separately (via `PolymodHandler.getAllMods()`) to enumerate installed mods and filter out those whose `api_version` is outside the supported range (`>=0.8.0 <0.9.0`).
 
 ```haxe
 // Simplified from source/funkin/modding/PolymodHandler.hx
@@ -51,9 +52,13 @@ var loadedModList:Array<ModMetadata> = polymod.Polymod.init({
   framework: OPENFL,
   apiVersionRule: API_VERSION_RULE,
   errorCallback: PolymodErrorHandler.onPolymodError,
-  useScriptedClasses: true,
-  parseRules: buildParseRules(),
+  customFilesystem: modFileSystem,
+  frameworkParams: buildFrameworkParams(),
   ignoredFiles: buildIgnoreList(),
+  parseRules: buildParseRules(),
+  skipDependencyErrors: true,
+  useScriptedClasses: true,
+  loadScriptsAsync: false, // true on HTML5
 });
 ```
 

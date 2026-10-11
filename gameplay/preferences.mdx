@@ -94,12 +94,10 @@ Preferences.downscroll = true;
 
 ## Audio Settings
 
-<ResponseField name="audioVisualOffset" type="Int (ms)" default="0">
-  An offset (in milliseconds) that shifts the visual display of notes relative to the audio. Intended to compensate for display lag rather than input lag. Currently marked as "unused" in the source but is stored in save data and read by `Conductor.instance.audioVisualOffset`.
-</ResponseField>
+The `globalOffset` preference (documented above under Gameplay Settings) is the primary tool for compensating audio latency. A separate `audioVisualOffset` value is stored in `Save.instance.options.audioVisualOffset` and exposed as `Conductor.instance.audioVisualOffset`; it is intended to compensate for display lag rather than input lag. Because `audioVisualOffset` is **not** a field of `Preferences`, it is not listed here — it is read directly from the save file by the `Conductor`.
 
 <Warning>
-  `audioVisualOffset` is distinct from `globalOffset`. `globalOffset` shifts **when inputs are judged**; `audioVisualOffset` is intended to shift **when notes are drawn**. Use `globalOffset` for typical audio-device latency compensation.
+  Do not confuse `globalOffset` with `audioVisualOffset`. `globalOffset` shifts **when inputs are judged**; `audioVisualOffset` is intended to shift **when notes are drawn**. Use `Preferences.globalOffset` for typical audio-device latency compensation.
 </Warning>
 
 ---

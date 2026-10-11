@@ -222,3 +222,14 @@ function changeSection(?sections:Int = 0):Void
 ```
 
 Choose the form that accurately reflects the intended contract of the argument.
+
+## JSON Formatting
+
+JSON files are formatted automatically by the **Prettier** extension using the repo's `.prettierrc.js` configuration. No manual configuration is required beyond enabling Format on Save.
+
+<Note>
+  Prettier will automatically place expressions on a single line if they fit, but will keep them multi-line if they are manually formatted that way.
+
+  - Long single-line objects are automatically expanded.
+  - Short multi-line objects are **not** automatically collapsed — you may need to manually remove the first newline in a short multi-line object to convince Prettier to collapse it to one line.
+</Note>
