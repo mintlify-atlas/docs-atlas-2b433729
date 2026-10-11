@@ -1,0 +1,224 @@
+---
+title: "FNF Haxe Code Style Guide: Formatting and Conventions"
+sidebarTitle: "Code Style"
+description: "Formatting rules, naming conventions, comment standards, import ordering, and argument patterns for contributing Haxe code to Friday Night Funkin'."
+---
+
+Keeping the codebase consistent makes it easier for everyone — contributors and maintainers alike — to read, review, and debug. This guide covers every style convention used in the FNF repository. If you're submitting a code PR, make sure your changes follow all of these guidelines before opening it.
+
+## IDE Recommendation
+
+<Note>
+  **Visual Studio Code is the recommended IDE for FNF development.** It is the only editor with mature tooling for Haxe, and the repository ships with configurations that automate most of the style rules described in this guide.
+
+  Install the following extensions to get the full experience:
+  - [`nadako.vshaxe`](https://marketplace.visualstudio.com/items?itemName=nadako.vshaxe) — provides the Haxe Formatter, driven by the repo's `hxformat.json`
+  - [`vshaxe.haxe-checkstyle`](https://marketplace.visualstudio.com/items?itemName=vshaxe.haxe-checkstyle) — enforces code quality rules via Haxe Checkstyle
+  - [`esbenp.prettier-vscode`](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) — handles JSON formatting using the repo's `.prettierrc.js`
+  - [`jeremyfa.codedox`](https://marketplace.visualstudio.com/items?itemName=jeremyfa.codedox) — adds IDE support for JavaDoc-style doc comments
+
+  Enable **Format on Save** in your VSCode settings so that `hxformat.json` and Prettier are applied automatically every time you save a file.
+</Note>
+
+## Whitespace and Indentation
+
+Indentation style and line-break rules are enforced automatically by the Haxe Formatter extension using the repo's `hxformat.json` configuration file. You don't need to configure anything manually — enabling Format on Save is enough.
+
+The Haxe Checkstyle extension separately monitors `IndentationCharacter` (what character is used) and `Indentation` (how deep the nesting goes), and will surface violations in the Problems panel.
+
+## Variable and Function Names
+
+Name variables and functions using **lowerCamelCase** with descriptive titles. A slightly longer name is always better than a cryptic abbreviation — there is no penalty for verbosity as long as it doesn't become excessive.
+
+```haxe
+// Good: descriptive, lowerCamelCase
+var targetTimeSteps:Float = 0.0;
+var skipEndingTransition:Bool = false;
+
+function changeSection(sections:Int):Void { }
+function checkSyncError(?targetTime:Float):Float { }
+
+// Bad: too short to be meaningful
+var t:Float = 0.0;
+var skip:Bool = false;
+
+function cs(s:Int):Void { }
+```
+
+## Code Comments
+
+Comments help future contributors understand _why_ code does what it does — not just what it does. Follow these rules when adding comments:
+
+- Use **JavaDoc-style doc comments** (`/** ... */`) for all `public` functions. The CodeDox extension generates the scaffold automatically.
+- Only comment code that **genuinely warrants explanation**. If the code is self-explanatory, skip the comment.
+- Keep comments **clear and concise** — don't restate what the code already says.
+- Only **sign a comment with your name** if the change is complex enough that future contributors might need to reach out for more context.
+
+Here is a real example pulled directly from the codebase — a `changeSection` function that jumps forward or backward in a song:
+
+### ❌ Don't
+
+```haxe
+/**
+  * jumps around the song
+  * works with bpm changes but skipped notes still hurt
+  * @param sections how many sections to jump, negative = backwards
+  */
+function changeSection(sections:Int):Void
+{
+  // Pause the music, as you probably guessed
+  // FlxG.sound.music.pause();
+
+  // Set the target time in steps, I don't really get how this works though lol - [GitHub username]
+  var targetTimeSteps:Float = Conductor.instance.currentStepTime + (Conductor.instance.stepsPerMeasure * sections);
+  var targetTimeMs:Float = Conductor.instance.getStepTimeInMs(targetTimeSteps);
+
+  // Don't go back in time to before the song started, that would probably break a lot of things and cause a bunch of problems!
+  targetTimeMs = Math.max(0, targetTimeMs);
+
+  if (FlxG.sound.music != null) // If the music is not null, set the time to the target time
+  {
+    FlxG.sound.music.time = targetTimeMs;
+  }
+
+  // Handle skipped notes and events and all that jazz
+  handleSkippedNotes();
+  SongEventRegistry.handleSkippedEvents(songEvents, Conductor.instance.songPosition);
+  // regenNoteData(FlxG.sound.music.time);
+
+  Conductor.instance.update(FlxG.sound?.music?.time ?? 0.0);
+
+  // I hate this function - [GitHub username]
+  resyncVocals();
+}
+```
+
+Problems with the above:
+- The doc comment is vague and lowercase
+- Inline comments restate obvious logic ("if the music is not null…")
+- Commented-out code is left in (`FlxG.sound.music.pause()`, `regenNoteData(…)`)
+- Comments contain personal frustration and contributor names that don't add information
+
+### ✅ Do
+
+```haxe
+/**
+  * Jumps forward or backward a number of sections in the song.
+  * Accounts for BPM changes, does not prevent death from skipped notes.
+  * @param sections The number of sections to jump, negative to go backwards.
+  */
+function changeSection(sections:Int):Void
+{
+  var targetTimeSteps:Float = Conductor.instance.currentStepTime + (Conductor.instance.stepsPerMeasure * sections);
+  var targetTimeMs:Float = Conductor.instance.getStepTimeInMs(targetTimeSteps);
+
+  // Don't go back in time to before the song started.
+  targetTimeMs = Math.max(0, targetTimeMs);
+
+  if (FlxG.sound.music != null)
+  {
+    FlxG.sound.music.time = targetTimeMs;
+  }
+
+  handleSkippedNotes();
+  SongEventRegistry.handleSkippedEvents(songEvents, Conductor.instance.songPosition);
+
+  Conductor.instance.update(FlxG.sound?.music?.time ?? 0.0);
+
+  resyncVocals();
+}
+```
+
+The doc comment is precise and properly capitalised, inline comments explain only non-obvious behaviour, and all dead code has been removed.
+
+Here's a second before/after showing how over-commenting hurts readability:
+
+### ❌ Don't
+
+```haxe
+// Play the vocals
+trace('Playing vocals...');
+// Add the vocals
+add(vocals);
+// Play the vocals for real this time lol
+vocals.play();
+// Set the vocals volume
+vocals.volume = 1.0;
+// Set the vocals pitch
+vocals.pitch = playbackRate;
+// Set the vocals time to the music time
+vocals.time = FlxG.sound.music.time;
+// trace('${FlxG.sound.music.time}');
+// trace('${vocals.time}');
+// functionThatWasntHereBeforeThisPRorSomethingIdKLOL();\
+/* testsprite = new FlxSprite(0, 0);
+testsprite.loadGraphic(Paths.image('test'));
+testsprite.screenCenter();
+add(testsprite); */
+```
+
+### ✅ Do
+
+```haxe
+trace('Playing vocals...');
+add(vocals);
+vocals.play();
+vocals.volume = 1.0;
+vocals.pitch = playbackRate;
+vocals.time = FlxG.sound.music.time;
+```
+
+## Unused Code
+
+<Warning>
+  **Do not comment out unused code.** Leaving commented-out blocks in the codebase makes files longer and harder to navigate for everyone.
+
+  If you need to preserve a snippet for reference, use Git — older code is always recoverable by browsing the commit history. Delete unused code and trust the version control system to keep history safe.
+
+  The `CommentedOutCode` Haxe Checkstyle rule is explicitly enabled in the repo to enforce this.
+</Warning>
+
+## License Headers
+
+Do **not** add per-file license headers to source files. The top-level `LICENSE.md` file covers the entire repository. Adding redundant headers to individual files creates maintenance overhead and is inconsistent with the rest of the codebase.
+
+## Imports
+
+All imports should be placed in a **single group** at the top of the file, sorted in **alphabetical order**. The only exception is conditional imports (using compile-time defines), which go at the **end** of the import list — still sorted alphabetically within their block.
+
+```haxe
+import haxe.format.JsonParser;
+import openfl.Assets;
+import openfl.geom.Matrix;
+import openfl.geom.Matrix3D;
+#if sys
+import funkin.io.FileUtil;
+import sys.io.File;
+#end
+```
+
+Do not split imports into multiple groups by module or feature — keep everything in one flat sorted list.
+
+## Argument Formatting
+
+Haxe supports two distinct mechanisms for optional/default function arguments, and they behave differently. **Do not use them together on the same argument.**
+
+| Syntax | Type | Default value | Use when… |
+|---|---|---|---|
+| `myFunction(?input:Int)` | `Null<Int>` | `null` | You want to detect whether the caller passed a value at all |
+| `myFunction(input:Int = 0)` | `Int` | `0` | You always want a concrete fallback and don't need nullability |
+
+Using both (`?input:Int = 0`) is valid Haxe syntax but produces a `Null<Int>` that defaults to `0` — meaning it is never actually `null`, but is still annotated as nullable. This makes null-safety checks noisier and more confusing throughout the codebase.
+
+```haxe
+// Good: optional argument — caller can omit it, value will be null
+public function checkSyncError(?targetTime:Float):Float
+
+// Good: default argument — always an Int, defaults to 0
+function changeSection(sections:Int = 0):Void
+
+// Bad: both together — redundant and misleads the null-safety checker
+function changeSection(?sections:Int = 0):Void
+```
+
+Choose the form that accurately reflects the intended contract of the argument.

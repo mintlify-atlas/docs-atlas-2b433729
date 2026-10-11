@@ -1,0 +1,276 @@
+---
+title: "Song Metadata JSON Schema Reference (v2.2.2)"
+sidebarTitle: "Song Metadata"
+description: "Full field-by-field reference for the FNF song metadata JSON format, including time changes, play data, character data, and audio offsets."
+---
+
+Every FNF song stores its display information and configuration in a file named `<songid>-metadata.json`. This file is loaded eagerly at startup so that the game can populate menus like Freeplay without reading the larger chart data. Its current schema version is **2.2.2**. Alternate variations of the same song use identically structured files named `<songid>-metadata-<variation>.json`.
+
+The metadata file is intentionally separate from the chart data file. Keeping it small means the game can parse and cache the metadata for every available song with minimal memory overhead, deferring the bulky note arrays until a player actually starts a chart.
+
+## Top-Level Fields
+
+<ParamField path="version" type="string" required>
+  Semantic Version string for the metadata schema. The current value is
+  `"2.2.2"`. The game uses this to decide which migration path (if any) to
+  apply when loading older files.
+</ParamField>
+
+<ParamField path="songName" type="string" required>
+  Human-readable display name of the song shown in menus (e.g. `"DadBattle"`).
+  This is distinct from the song ID, which is lowercase and used in filenames.
+</ParamField>
+
+<ParamField path="artist" type="string" required>
+  Human-readable name of the artist(s) (e.g. `"Kawai Sprite"`).
+</ParamField>
+
+<ParamField path="charter" type="string">
+  Optional. The name of the person who charted the song. Not displayed in-game
+  by default but can be read by mods or tooling.
+</ParamField>
+
+<ParamField path="timeFormat" type="string" required>
+  The unit used for all timestamps in this file and the associated chart file.
+  Currently the only supported value is `"ms"` (milliseconds). Future versions
+  may support fractional beats (`"float"`) or MIDI ticks (`"ticks"`).
+</ParamField>
+
+<ParamField path="timeChanges" type="SongTimeChange[]" required>
+  An ordered array of BPM and time-signature changes. **At least one entry is
+  required**, and the first entry must have `t: 0` to define the song's opening
+  tempo. See [SongTimeChange](#songtimechange) below.
+</ParamField>
+
+<ParamField path="playData" type="SongPlayData" required>
+  Gameplay configuration: difficulties, characters, stage, note style, and
+  Freeplay display data. See [SongPlayData](#songplaydata) below.
+</ParamField>
+
+<ParamField path="offsets" type="SongOffsets">
+  Optional audio synchronisation offsets in milliseconds. These correct for
+  timing issues in the audio files themselves and are applied before any
+  user-level hardware offsets. See [SongOffsets](#songoffsets) below.
+</ParamField>
+
+<ParamField path="generatedBy" type="string" required>
+  A free-form string identifying the tool that produced the file (e.g.
+  `"EliteMasterEric (by hand)"`). Used for debugging only — **the game never
+  reads this field during gameplay**. Custom engines should write a unique
+  value here so issues can be attributed to the right tool.
+</ParamField>
+
+---
+
+## SongTimeChange
+
+Each object in the `timeChanges` array specifies a BPM and time-signature at a given millisecond timestamp. The game calculates beat and step positions linearly between consecutive entries.
+
+<ParamField path="t" type="float" required>
+  Timestamp of this BPM change in milliseconds. The first entry must be `0`.
+</ParamField>
+
+<ParamField path="bpm" type="float" required>
+  Beats per minute at this timestamp. Must be provided in the first entry;
+  subsequent entries may omit it to inherit the previous BPM.
+</ParamField>
+
+<ParamField path="n" type="int">
+  Time signature numerator (beats per bar). Defaults to `4`.
+</ParamField>
+
+<ParamField path="d" type="int">
+  Time signature denominator. Must be a power of two (e.g. 2, 4, 8, 16).
+  Defaults to `4`.
+</ParamField>
+
+<ParamField path="bt" type="int[]">
+  Beat tuplets — an array of length `n` that defines how many steps each beat
+  is subdivided into. Defaults to `[4, 4, 4, 4]`. You can supply a single
+  integer instead of an array to apply the same value to every beat.
+</ParamField>
+
+<ParamField path="b" type="float">
+  Optional beat-time hint. Stores the pre-calculated beat position of this
+  change. If omitted the engine recalculates it automatically; only include
+  this field if you know what you're doing.
+</ParamField>
+
+---
+
+## SongPlayData
+
+The `playData` object contains everything the game needs to present the song to a player, assign characters and stages, and link to alternate variations.
+
+<ParamField path="songVariations" type="string[]">
+  IDs of alternate variations defined for this song. For each entry `v` the
+  game expects a `<songid>-metadata-<v>.json` and `<songid>-chart-<v>.json`
+  file to exist. For example, `["erect"]` means `dadbattle-metadata-erect.json`
+  and `dadbattle-chart-erect.json` should be present. Defaults to an empty
+  array.
+</ParamField>
+
+<ParamField path="difficulties" type="string[]" required>
+  The difficulty IDs available in this variation (e.g. `["easy","normal","hard"]`).
+  Any difficulty not listed here is ignored even if note data for it exists in
+  the chart file.
+</ParamField>
+
+<ParamField path="characters" type="SongCharacterData" required>
+  Character and instrumental assignments for this variation. See
+  [SongCharacterData](#songcharacterdata) below.
+</ParamField>
+
+<ParamField path="stage" type="string" required>
+  The string ID of the stage to load (e.g. `"mainStage"`).
+</ParamField>
+
+<ParamField path="noteStyle" type="string" required>
+  The string ID of the note style to apply (e.g. `"funkin"` for the default
+  arrow style).
+</ParamField>
+
+<ParamField path="ratings" type="object">
+  A map of difficulty ID → integer difficulty rating for display in Freeplay.
+  ```json
+  { "easy": 1, "normal": 3, "hard": 5 }
+  ```
+</ParamField>
+
+<ParamField path="album" type="string">
+  The album ID to display on the Freeplay album art panel. If `null`, no album
+  art is shown.
+</ParamField>
+
+<ParamField path="previewStart" type="float">
+  Timestamp in milliseconds at which the Freeplay audio preview begins.
+  Defaults to `0` (start of the song). Added in schema version `2.2.2`.
+</ParamField>
+
+<ParamField path="previewEnd" type="float">
+  Timestamp in milliseconds at which the Freeplay audio preview ends. Defaults
+  to 20 % of the song length. Added in schema version `2.2.2`.
+</ParamField>
+
+---
+
+## SongCharacterData
+
+The `characters` object inside `playData` specifies which characters and instrumentals are used for this variation.
+
+<ParamField path="player" type="string" required>
+  Character ID for the player (Boyfriend's slot). Used to resolve
+  `Voices-<player>.ogg` for vocal loading.
+</ParamField>
+
+<ParamField path="girlfriend" type="string" required>
+  Character ID for the girlfriend character displayed in the middle of the
+  stage.
+</ParamField>
+
+<ParamField path="opponent" type="string" required>
+  Character ID for the opponent (Daddy Dearest's slot). Used to resolve
+  `Voices-<opponent>.ogg`.
+</ParamField>
+
+<ParamField path="instrumental" type="string">
+  Instrumental ID that selects `Inst-<instrumental>.ogg` as the backing track.
+  Defaults to an empty string, which causes the game to load `Inst.ogg`.
+</ParamField>
+
+<ParamField path="altInstrumentals" type="string[]">
+  An array of additional instrumental IDs that are available as alternates.
+  Defaults to an empty array.
+</ParamField>
+
+<ParamField path="playerVocals" type="string[]">
+  Optional override for which vocal file(s) to load for the player. Defaults
+  to `[player]` when omitted.
+</ParamField>
+
+<ParamField path="opponentVocals" type="string[]">
+  Optional override for which vocal file(s) to load for the opponent. Defaults
+  to `[opponent]` when omitted.
+</ParamField>
+
+---
+
+## SongOffsets
+
+Audio synchronisation offsets applied before any user-level hardware correction. Positive values add silence before the audio starts; negative values trim silence from the beginning.
+
+<ParamField path="instrumental" type="float">
+  Millisecond offset applied to `Inst.ogg`. A value of `-10.0` starts the
+  instrumental 10 ms early relative to the chart. Defaults to `0`.
+</ParamField>
+
+<ParamField path="altInstrumentals" type="object">
+  A map of instrumental ID → float offset for each alternate instrumental.
+  Defaults to an empty map.
+</ParamField>
+
+<ParamField path="vocals" type="object">
+  A map of character ID → float offset for each character's vocal file,
+  applied on top of the instrumental offset. Defaults to an empty map.
+</ParamField>
+
+<ParamField path="altVocals" type="object">
+  A nested map of instrumental ID → (character ID → float) for per-character
+  vocal offsets when an alternate instrumental is active. Defaults to an empty
+  map.
+</ParamField>
+
+---
+
+## Full Example
+
+The following JSON is the complete metadata file for the Week 1 song *DadBattle*, taken directly from the FNFC specification.
+
+```json
+{
+  "version": "2.2.2",
+  "songName": "DadBattle",
+  "artist": "Kawai Sprite",
+  "timeFormat": "ms",
+  "timeChanges": [
+    {
+      "t": 0,
+      "bpm": 180
+    }
+  ],
+  "playData": {
+    "album": "volume1",
+    "previewStart": 0,
+    "previewEnd": 15000,
+    "ratings": {
+      "easy": 1,
+      "normal": 3,
+      "hard": 5
+    },
+    "songVariations": [
+      "erect"
+    ],
+    "difficulties": [
+      "easy",
+      "normal",
+      "hard"
+    ],
+    "characters": {
+      "player": "bf",
+      "girlfriend": "gf",
+      "opponent": "dad"
+    },
+    "stage": "mainStage",
+    "noteStyle": "funkin"
+  },
+  "generatedBy": "EliteMasterEric (by hand)"
+}
+```
+
+<Note>
+  This example includes `"songVariations": ["erect"]`, telling the Chart Editor
+  that `dadbattle-metadata-erect.json` and `dadbattle-chart-erect.json` also
+  exist inside the archive (or on disk). The `erect` variation can define
+  different characters, stages, events, and audio — everything the two
+  difficulties in that variation need to feel distinct.
+</Note>

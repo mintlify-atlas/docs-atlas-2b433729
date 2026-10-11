@@ -1,0 +1,231 @@
+---
+title: "Gameplay Overview: Rhythm Engine & Song Structure"
+sidebarTitle: "Overview"
+description: "A deep-dive into FNF's rhythm engine, Conductor singleton, beat/step signals, song structure, difficulty system, and how PlayState drives a round."
+---
+
+Friday Night Funkin' is built on top of HaxeFlixel and uses a custom rhythm engine to keep every visual and gameplay event locked to the musical beat. Understanding how the `Conductor`, `PlayState`, and the song-data pipeline fit together is the foundation for both modding and contributing code.
+
+## The Conductor
+
+`Conductor` is a singleton class that acts as the authoritative musical clock for the entire game — both during gameplay and in menus. It reads the song's list of `SongTimeChange` entries (each carrying a BPM, time signature numerator, and denominator) and continuously converts the current audio position into a hierarchy of musical time units:
+
+| Unit | Field | Description |
+|------|-------|-------------|
+| Step | `currentStep` / `currentStepTime` | Finest subdivision — 4 steps per beat in 4/4 |
+| Beat | `currentBeat` / `currentBeatTime` | One quarter-note at the current time signature |
+| Measure | `currentMeasure` / `currentMeasureTime` | Full bar — numerator beats wide |
+
+`Conductor.instance` is the active singleton. Call `Conductor.instance.update()` every frame (or pass a millisecond timestamp) to advance the clock. The instance is replaced via `Conductor.reset()`, which provisions a fresh object and re-routes the static signals automatically.
+
+### Beat, Step, and Measure Signals
+
+`Conductor` exposes three **static** `FlxSignal`s that fire on every new measure, beat, and step of the current singleton:
+
+```haxe
+// Static signals — always refer to Conductor.instance
+Conductor.measureHit  // fires once per measure
+Conductor.beatHit     // fires once per beat
+Conductor.stepHit     // fires once per step (4× per beat in 4/4)
+```
+
+Each signal has a matching **instance-level** counterpart (`onMeasureHit`, `onBeatHit`, `onStepHit`) for cases where you need to listen to a non-singleton `Conductor` directly — for example, the Chart Editor running its own preview clock in parallel with the main one.
+
+#### Listening to signals in a scripted class
+
+```haxe
+// Subscribe in your onCreate / create override
+Conductor.beatHit.add(onBeatHit);
+Conductor.stepHit.add(onStepHit);
+
+function onBeatHit():Void
+{
+  // Fires on every new beat — great for camera bumps,
+  // character idle animations, UI pulses, etc.
+  trace('Beat: ' + Conductor.instance.currentBeat);
+}
+
+function onStepHit():Void
+{
+  // Fires 4× per beat in standard 4/4 — use for fine-grained
+  // note-spawn logic or step-scrolling backgrounds.
+  trace('Step: ' + Conductor.instance.currentStep);
+}
+```
+
+<Note>
+  Always **remove** your listeners when the state is destroyed to avoid stale callbacks. Call `Conductor.beatHit.remove(onBeatHit)` in your `destroy()` override.
+</Note>
+
+### BPM and Time Signature
+
+The `bpm` property is derived from the current `SongTimeChange`. Songs may contain multiple time changes, allowing the BPM and/or time signature to shift mid-song. `Conductor.mapTimeChanges(songTimeChanges)` rebuilds the internal time-change table whenever a new song is loaded.
+
+```haxe
+// Read-only computed properties
+Conductor.instance.bpm            // current BPM (Float)
+Conductor.instance.beatLengthMs   // ms per beat at current BPM
+Conductor.instance.stepLengthMs   // ms per step (beatLengthMs / 4)
+Conductor.instance.measureLengthMs // ms per measure (beatLengthMs × numerator)
+```
+
+A user-configurable `globalOffset` (in milliseconds) is always applied to compensate for input or audio lag, alongside a per-chart `instrumentalOffset` and a file-format `formatOffset`. The combined value is accessible as `Conductor.instance.combinedOffset`.
+
+---
+
+## Song Structure
+
+### The `Song` Registry Entry
+
+Each song in the game is a `Song` object that implements `IRegistryEntry<SongMetadata>`. Songs are fetched from the singleton `SongRegistry` by their string ID:
+
+```haxe
+var song:Song = SongRegistry.instance.fetchEntry('bopeebo');
+```
+
+A `Song` holds metadata for every **variation** it supports (e.g. `"default"`, `"erect"`, `"pico"`) as a `Map<String, SongMetadata>`. Each variation then maps difficulty names to `SongDifficulty` objects, which carry the actual `SongChartData` (note data, scroll speed, events) and `SongOffsets`.
+
+```
+SongRegistry
+ └── Song  (id = "bopeebo")
+      ├── variation: "default"
+      │    ├── difficulty: "easy"   → SongDifficulty
+      │    ├── difficulty: "normal" → SongDifficulty
+      │    └── difficulty: "hard"   → SongDifficulty
+      └── variation: "erect"
+           ├── difficulty: "erect"      → SongDifficulty
+           └── difficulty: "nightmare" → SongDifficulty
+```
+
+### Difficulty System
+
+The base game ships with two difficulty groups:
+
+<CardGroup cols={2}>
+  <Card title="Standard Difficulties" icon="music">
+    **easy**, **normal**, **hard** — the classic trio present on most songs. `Constants.DEFAULT_DIFFICULTY` is `"normal"`.
+  </Card>
+  <Card title="Erect Variations" icon="bolt">
+    **erect** and **nightmare** — harder remixes shipped as a separate variation (`"erect"`). These use the same engine but may swap out instrumentals and vocals.
+  </Card>
+</CardGroup>
+
+The full default list is defined in `Constants`:
+
+```haxe
+// funkin/util/Constants.hx
+public static final DEFAULT_DIFFICULTY_LIST:Array<String> = ['easy', 'normal', 'hard'];
+public static final DEFAULT_DIFFICULTY_LIST_ERECT:Array<String> = ['erect', 'nightmare'];
+public static final DEFAULT_VARIATION:String = 'default';
+```
+
+`PlayStateParams` accepts optional `targetDifficulty` and `targetVariation` strings. If omitted, the game falls back to `Constants.DEFAULT_DIFFICULTY` and `Constants.DEFAULT_VARIATION` respectively.
+
+---
+
+## Note Directions
+
+The `NoteDirection` enum abstract maps the four arrow columns to integer indices. Because it is declared `from Int to Int`, it casts implicitly:
+
+```haxe
+// funkin/play/notes/NoteDirection.hx
+enum abstract NoteDirection(Int) from Int to Int
+{
+  public var LEFT  = 0;  // purple
+  public var DOWN  = 1;  // blue
+  public var UP    = 2;  // green
+  public var RIGHT = 3;  // red
+}
+```
+
+Each value also exposes `.name` (lowercase string), `.nameUpper`, and `.color` (`FlxColor`) helpers.
+
+---
+
+## The Strumline
+
+A **Strumline** (`funkin.play.notes.Strumline`) is a group of four note receptors — one per `NoteDirection`. `PlayState` creates exactly two strumlines:
+
+```haxe
+// funkin/play/PlayState.hx (init section)
+playerStrumline   = new Strumline(noteStyle, !isBotPlayMode, currentChart?.scrollSpeed);
+opponentStrumline = new Strumline(noteStyle, false,          currentChart?.scrollSpeed);
+```
+
+The second argument is `isPlayer` — only the player strumline accepts keyboard/gamepad input. The opponent strumline auto-fires notes without requiring input.
+
+Notes scroll toward the receptor arrows. With **downscroll** enabled (see [Preferences](/gameplay/preferences)), notes scroll upward from the top and the receptors sit at the bottom of the screen.
+
+---
+
+## PlayState — The Main Game State
+
+`PlayState` is the HaxeFlixel `FlxState` that runs an entire song session. It is constructed via `PlayStateParams`:
+
+```haxe
+typedef PlayStateParams =
+{
+  targetSong:Song,
+  ?targetDifficulty:String,
+  ?targetVariation:String,
+  ?targetInstrumental:String,
+  ?practiceMode:Bool,
+  ?botPlayMode:Bool,
+  ?playtestResults:Bool,
+  ?minimalMode:Bool,
+  ?startTimestamp:Float,
+  ?playbackRate:Float,
+  ?overrideMusic:Bool,
+}
+```
+
+Key responsibilities of `PlayState`:
+
+<Steps>
+  <Step title="Load song assets">
+    Fetches the `Song` from `SongRegistry`, reads the target `SongDifficulty`, and loads the instrumental and vocal audio tracks unless `overrideMusic` is set.
+  </Step>
+  <Step title="Initialize Conductor">
+    Calls `Conductor.instance.mapTimeChanges(...)` with the song's time-change list so the clock knows the full BPM map before the countdown begins.
+  </Step>
+  <Step title="Spawn stage, characters, and strumlines">
+    Loads the `Stage` from `StageRegistry`, instantiates Boyfriend and the opponent `BaseCharacter`, and creates `playerStrumline` / `opponentStrumline`.
+  </Step>
+  <Step title="Run gameplay loop">
+    Each `update()` tick advances `Conductor.instance`, scrolls notes, checks player input via `PreciseInputManager`, and calls `Scoring.scoreNote()` / `Scoring.judgeNote()` on hits.
+  </Step>
+  <Step title="Transition to ResultState">
+    When the song ends (or the player Game Overs and retries), `PlayState` pushes a `ResultState` with the accumulated `Tallies`, then returns to `FreeplayState` or `StoryModeState`.
+  </Step>
+</Steps>
+
+### Game Flow Diagram
+
+```
+MainMenuState
+    ├── StoryModeState  →  PlayState  →  ResultState  →  StoryModeState
+    └── FreeplayState   →  PlayState  →  ResultState  →  FreeplayState
+                                ↓
+                         (Game Over)
+                        GameOverSubState
+                                ↓
+                         Retry → PlayState
+```
+
+<Tip>
+  Use `PlayState.instance` (a static reference set during `create()`) to access the active game session from scripted classes and modded songs. Always null-check it — it is `null` outside of gameplay.
+</Tip>
+
+---
+
+## Timing Deep-Dive
+
+`Conductor.update()` is called once per game tick. It:
+
+1. Reads the current audio position from `FlxG.sound.music.time` (or an explicit value you pass in).
+2. Adds `combinedOffset` (instrumental + format + global) to produce `songPosition`.
+3. Walks the `timeChanges` array to find the active `SongTimeChange`.
+4. Derives `currentStepTime`, `currentBeatTime`, and `currentMeasureTime` as floating-point values.
+5. Dispatches `onStepHit`, `onBeatHit`, and/or `onMeasureHit` whenever the integer part of those values advances.
+
+For sub-frame accuracy (e.g. precise input handling), use `Conductor.instance.getTimeWithDelta()` which adds a `songPositionDelta` derived from `FlxG.elapsed` between audio position updates.

@@ -1,0 +1,187 @@
+---
+title: "How to Contribute to Friday Night Funkin': Full Guide"
+sidebarTitle: "Guide"
+description: "Learn how to contribute to FNF through issues and pull requests, covering etiquette, branch strategy, code PRs, and asset guidelines."
+---
+
+Contributing to Friday Night Funkin' is open to everyone — whether you're filing a bug report, suggesting an improvement, fixing a typo in the docs, or submitting a pull request with code changes. This guide walks through every type of contribution and the expectations around each so your work has the best chance of being reviewed and merged.
+
+## Part 1: Etiquette
+
+Good contributions start with good communication. Keep these principles in mind whenever you open an issue or pull request:
+
+- **Be respectful.** Everyone here is trying to help improve the game. Treat others the way you'd want to be treated.
+- **Write clear, concise titles.** Don't put your entire description in the title field — save the details for the body.
+- **Don't spam.** Avoid opening duplicate issues or unnecessary pull requests.
+- **Use common sense.** If something feels off, it probably is. When in doubt, check existing issues and discussions first.
+
+## Part 2: Issues
+
+Issues serve many purposes, from reporting bugs to suggesting new features. Before you open one, make sure you meet all the requirements below.
+
+### Requirements
+
+Make sure you're playing:
+
+- The **latest version** of the game (currently **v0.8.6**, or **v0.8.7** for Android), or a public playtest version (v0.9 Feature Preview builds)
+- **Without any mods** (unless the issue specifically involves mod behavior)
+- On [Newgrounds](https://www.newgrounds.com/portal/view/770371) or downloaded from [itch.io](https://ninja-muffin24.itch.io/funkin) — only official builds are supported
+
+### Rejected Features
+
+Before suggesting a feature, check that it hasn't already been reviewed and turned down. The table below lists commonly requested features and links to the rationale for each rejection.
+
+| Feature | Reason |
+|---|---|
+| Combo Break + Accuracy Displays | [#2681](https://github.com/FunkinCrew/Funkin/pull/2681#issuecomment-2156308982) |
+| Toggleable Ghost Tapping | [#2564](https://github.com/FunkinCrew/Funkin/pull/2564#issuecomment-2119701802) |
+| Perfectly Centered Strumlines | *(same as above)* |
+| MultiKey, 9k, More than 4 keys, etc. | [#4243](https://github.com/FunkinCrew/Funkin/issues/4243#issuecomment-2692371969) |
+| Flashy Combo Milestones | [#4700](https://github.com/FunkinCrew/Funkin/pull/4700#issuecomment-2798916579) |
+| Losing Icons for DD and Parents | [#3048](https://github.com/FunkinCrew/Funkin/issues/3048#issuecomment-2243491536) |
+| Playable GF / Speaker BF / Speaker Pico | [#2953](https://github.com/FunkinCrew/Funkin/issues/2953#issuecomment-2216985230) |
+| New Intro Text Lines | [#5031](https://github.com/FunkinCrew/Funkin/issues/5031#issuecomment-2855593376) |
+| Fresh (Chill Mix) as Title Screen Music | [#4282](https://github.com/FunkinCrew/Funkin/pull/4282#issuecomment-2709334718) |
+| Difficulty Ratings above 20 | [#3075](https://github.com/FunkinCrew/Funkin/issues/3075#issuecomment-2368984497) |
+| Quick Restart Keybind (not R) | [#3268](https://github.com/FunkinCrew/Funkin/issues/3268#issuecomment-2351095232) |
+| Countdown after Unpausing Song | [#2721](https://github.com/FunkinCrew/Funkin/issues/2721#issuecomment-2159330106) |
+| "Philly Glow" Effect from Psych Engine | [#3788](https://github.com/FunkinCrew/Funkin/issues/3788#issuecomment-2688966982) |
+| Importing Charts from Psych Engine (and other mod content) | [#2586](https://github.com/FunkinCrew/Funkin/issues/2586#issuecomment-2125733327) |
+| Backwards Compatibility for Modding | [#3949](https://github.com/FunkinCrew/Funkin/issues/3949#issuecomment-2608391329) |
+| Lua Support | [#2643](https://github.com/FunkinCrew/Funkin/issues/2643#issuecomment-2143718093) |
+| Note Hitsounds | [#4112](https://github.com/FunkinCrew/Funkin/pull/4112#issuecomment-5347549977) |
+
+### Issue Types
+
+Choose the template that best matches your situation:
+
+<AccordionGroup>
+  <Accordion title="Bug Report">
+    For **minor bugs** and general issues with the game. Choose this one if none of the other templates fit your needs.
+
+    [View open bug reports →](https://github.com/FunkinCrew/Funkin/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22type%3A%20minor%20bug%22)
+  </Accordion>
+
+  <Accordion title="Crash Report">
+    For **crashes and freezes** — for example, the Null Object Reference problem from v0.3.0.
+
+    [View open crash reports →](https://github.com/FunkinCrew/Funkin/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22type%3A%20major%20bug%22)
+  </Accordion>
+
+  <Accordion title="Charting Issue">
+    For **misplaced notes**, wonky camera movements, broken song events, and anything related to the game's charts.
+
+    [View open charting issues →](https://github.com/FunkinCrew/Funkin/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22type%3A%20charting%20issue%22)
+  </Accordion>
+
+  <Accordion title="Enhancement">
+    For **suggestions** to add new features or improve existing ones. The team is always happy to hear ideas — just make sure yours isn't on the rejected features list above.
+
+    [View open enhancement requests →](https://github.com/FunkinCrew/Funkin/issues?q=is%3Aissue%20state%3Aopen%20label%3A%22type%3A%20enhancement%22)
+  </Accordion>
+
+  <Accordion title="Compiling Help">
+    For **issues compiling the game**. Read the [Troubleshooting Guide](/troubleshooting) first. Note that legacy versions prior to v0.3.0 are not supported.
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  If none of the issue templates suit your inquiry — such as general questions or coding help — please [open a discussion](https://github.com/FunkinCrew/Funkin/discussions) instead of an issue.
+</Tip>
+
+### Before You Submit
+
+Complete every step of the Issue Checklist at the top of your chosen template. Issues with incomplete checklists may be closed without review.
+
+Before hitting submit, run through this checklist manually:
+
+- [ ] I am using the latest supported version of the game
+- [ ] I am not running any mods (unless the issue involves mods)
+- [ ] I am using an official build from Newgrounds or itch.io
+- [ ] I searched existing issues and confirmed this hasn't been reported before
+- [ ] I am reporting **only one issue** in this submission (split multiple reports into separate issues)
+- [ ] My title is clear and concise — not a full description
+
+## Part 3: Pull Requests
+
+Community members are welcome to contribute code, documentation, assets, and more by opening pull requests. This section covers how to structure them for the best chance of acceptance.
+
+### Choosing a Base Branch
+
+Always create a **dedicated branch** in your fork before opening a PR — never work directly on your fork's default `main` branch. That's considered an anti-pattern by GitHub themselves.
+
+Which base branch you target depends on what you're changing:
+
+| Change type | Base branch |
+|---|---|
+| Game code (`.hx` files) or any other file type | `develop` |
+| Documentation (`.md` files) | `main` |
+| GitHub files (`.yml`, `.github/` folder) | `main` |
+
+When in doubt, base your branch on `develop`.
+
+### PR Workflow
+
+<Steps>
+  <Step title="Fork and branch">
+    Fork the [Funkin repository](https://github.com/FunkinCrew/Funkin) and create a new branch from either `develop` or `main` depending on your change type (see the table above). Use a descriptive branch name like `docs/fix-typo` or `fix/minor-bugfix`.
+  </Step>
+  <Step title="Make your changes">
+    Implement your fix, feature, or documentation update. Follow the relevant guidelines in the sections below for code, documentation, or asset PRs.
+  </Step>
+  <Step title="Open a PR targeting the correct branch">
+    Open a pull request back to `FunkinCrew/Funkin` and set the base branch to the same one you branched from — `develop` or `main`.
+  </Step>
+  <Step title="Respond to review feedback">
+    If the team requests changes, your PR will be labelled `status: needs revision`. You have **90 days** to address the requested changes. After that period, the PR will be closed and labelled `status: stale`. You can always request a reopen once the issues are addressed.
+  </Step>
+  <Step title="Resolve merge conflicts">
+    If upstream changes create merge conflicts, update or rebase your branch. Use an [interactive rebase](https://docs.github.com/en/get-started/using-git/about-git-rebase) to squash messy commit histories before requesting re-review.
+  </Step>
+</Steps>
+
+### Code PRs
+
+Code-based PRs fix bugs or implement new features by modifying `.hx` files inside the `source/` folder.
+
+**Requirements for code PRs:**
+
+- The game must **compile and run** with your changes applied. See the [Compilation Guide](/compiling) if you need help.
+- Your code must follow the [Code Style Guide](/contributing/code-style).
+- Comments must be meaningful — see the [code comments guidelines](/contributing/code-style#code-comments) for details.
+
+### Documentation PRs
+
+Documentation PRs fix typos or add new information to `.md` files found throughout the repository.
+
+Keep your changes easy to understand and formatted consistently with the surrounding content.
+
+<Warning>
+  **Do NOT touch the `LICENSE.md` file** — not even to make small corrections. This file is off-limits for all contributor PRs without exception.
+</Warning>
+
+### GitHub PRs
+
+GitHub-related PRs modify `.yml` workflow files or anything inside the `.github/` folder. Test your changes on your fork's own main branch first to make sure you don't break Actions, issue templates, or other automation.
+
+### funkin.assets PRs
+
+The `assets/` submodule lives in a separate repository: [funkin.assets](https://github.com/FunkinCrew/funkin.assets).
+
+- If you **only** modify files in the `assets/` folder, open your PR against `funkin.assets` — not the main `Funkin` repo.
+- If your changes touch **both** repositories, open two separate PRs and cross-reference them in each PR's description.
+- Always target the `develop` branch in `funkin.assets`, just as you would in the main repo.
+
+#### Charting PRs
+
+Charting PRs adjust chart metadata by modifying `*-metadata.json` files in `preload/data/songs/`.
+
+<Warning>
+  The Funkin' Crew **does not accept changes to chart `.json` files** (the actual note data). If you spot an error in a chart, open an issue in the main `Funkin` repo and the team will review and apply fixes themselves.
+</Warning>
+
+Charting PRs should only be opened against the `funkin.assets` repository.
+
+---
+
+Thank you for taking the time to contribute to Friday Night Funkin'. The team looks forward to seeing what you build!

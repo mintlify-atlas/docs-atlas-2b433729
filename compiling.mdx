@@ -1,0 +1,187 @@
+---
+title: "Compiling Friday Night Funkin' for Desktop & Web"
+sidebarTitle: "Compiling"
+description: "Complete step-by-step guide to building Friday Night Funkin' from source on Windows, macOS, Linux, and HTML5, including all build flags."
+---
+
+This guide walks you through every step required to compile Friday Night Funkin' from source code on a desktop operating system. Whether you are targeting Windows, macOS, Linux, or HTML5, the core workflow is the same: clone the repository, install Haxe dependencies, run platform setup, then build with Lime.
+
+<Warning>
+  **Do not** use the "Download ZIP" button on GitHub to obtain the source code. The game's assets live in a Git submodule, which ZIP downloads do not include. You **must** use `git clone` as shown below.
+</Warning>
+
+## Prerequisites
+
+Before you begin, install the following tools:
+
+- **[Haxe](https://haxe.org)** — the Haxe compiler (any recent stable release).
+- **[Git](https://www.git-scm.com)** — required for cloning the repo and for `hmm` to fetch git-sourced libraries.
+
+Platform-specific prerequisites are covered in the [Platform Setup](#platform-setup) section below.
+
+## Build Steps
+
+<Steps>
+
+<Step title="Clone the Repository">
+Open a terminal or command prompt, navigate to the folder where you want the source code, then clone the base repository:
+
+```bash
+cd C:\Users\YOURNAME\Documents   # Windows example — change to your preferred path
+git clone https://github.com/FunkinCrew/funkin.git
+cd funkin
+```
+</Step>
+
+<Step title="Download the Asset Submodule">
+The game's art, audio, and data files live in a separate Git submodule. Initialise and pull it now:
+
+```bash
+git submodule update --init --recursive
+```
+
+<Warning>
+  By running this command you are downloading content that is **proprietary and protected by copyright and trademark law**. Review the [funkin.assets LICENSE](https://github.com/FunkinCrew/funkin.assets/blob/main/LICENSE.md) before proceeding. You may **not** redistribute this content.
+</Warning>
+</Step>
+
+<Step title="Install hmm">
+FNF uses [hmm](https://github.com/FunkinCrew/hmm) to manage its Haxe library dependencies instead of plain `haxelib`. Install it globally and run its one-time setup:
+
+```bash
+haxelib --global install hmm
+haxelib --global run hmm setup
+```
+
+<Note>
+  If you encounter errors installing Lime through hmm, use FunkinCrew's patched forks of haxelib and hmm instead:
+
+  ```bash
+  haxelib --global git haxelib https://github.com/FunkinCrew/haxelib.git
+  haxelib --global git hmm https://github.com/FunkinCrew/hmm.git
+  ```
+</Note>
+</Step>
+
+<Step title="Install All Haxe Libraries">
+With hmm set up, install every library listed in `hmm.json`:
+
+```bash
+hmm install
+```
+
+This fetches both Haxelib-hosted packages and the FunkinCrew-forked Git repositories at the exact commit hashes pinned in `hmm.json`.
+</Step>
+
+<Step title="Set Up Lime">
+Run the Lime global setup command to register the Lime CLI tools:
+
+```bash
+haxelib run lime setup
+```
+</Step>
+
+<Step title="Platform Setup">
+Perform the additional setup steps for your target platform.
+
+<Tabs>
+  <Tab title="Windows">
+    Download and run the [Visual Studio Build Tools installer](https://aka.ms/vs/17/release/vs_BuildTools.exe).
+
+    When the installer opens, switch to the **Individual Components** tab and select **both** of the following:
+
+    - **MSVC v143 — VS 2022 C++ x64/x86 build tools**
+    - **Windows 10/11 SDK**
+
+    No other Visual Studio components are required. You do **not** need a full Visual Studio IDE installation.
+  </Tab>
+  <Tab title="macOS">
+    Follow the official [Lime macOS setup documentation](https://lime.openfl.org/docs/advanced-setup/macos/):
+
+    ```bash
+    lime setup mac
+    ```
+
+    <Note>
+      If you intend to distribute a macOS release build, the `art/macos-universal.sh` script can produce a Universal Binary that runs natively on both Apple Silicon (arm64) and Intel (x86_64). See `docs/COMPILING_MAC.md` for details.
+    </Note>
+  </Tab>
+  <Tab title="Linux">
+    Run the Lime Linux setup command:
+
+    ```bash
+    lime setup linux
+    ```
+
+    FNF depends on **hxvlc** for video playback, which requires native libVLC development packages. On Ubuntu/Debian-based distributions, run:
+
+    ```bash
+    sudo apt install libvlc-dev libvlccore-dev libvlccore9
+    ```
+
+    For other distributions, refer to the [hxvlc dependency documentation](https://github.com/MAJigsaw77/hxvlc?tab=readme-ov-file#dependencies).
+  </Tab>
+  <Tab title="HTML5">
+    HTML5 requires **no additional platform setup**. The Haxe → JavaScript transpiler is included with Haxe itself, and Lime handles the rest.
+  </Tab>
+</Tabs>
+</Step>
+
+<Step title="Rebuild Native Binaries (if needed)">
+On some systems the pre-built native Lime/hxcpp binaries may not match your OS or architecture. If you run into native library errors, rebuild them first:
+
+```bash
+lime rebuild <PLATFORM>
+lime rebuild <PLATFORM> -debug
+```
+
+Replace `<PLATFORM>` with `windows`, `mac`, or `linux` as appropriate.
+</Step>
+
+<Step title="Build and Run the Game">
+You are now ready to compile and launch the game. Use `lime test` with your target platform:
+
+```bash
+lime test windows    # Windows desktop
+lime test mac        # macOS desktop
+lime test linux      # Linux desktop
+lime test html5      # Web (opens in default browser)
+```
+
+Lime will compile the project, package assets, and launch the executable automatically.
+</Step>
+
+</Steps>
+
+## Build Flags
+
+You can customise the build by appending flags to the `lime test` command. A complete list is maintained in `project.hxp`; the most commonly used flags are documented below.
+
+| Flag | Description |
+|---|---|
+| `-debug` | Build in debug mode. Enables in-game debug functions, disables compile-time optimisations, enables asset redirection, and starts the VSCode hxcpp debug server. |
+| `-DGITHUB_BUILD` | Enables in-game debug functions (e.g. `PgUp`/`PgDn` time travel) **without** enabling the other debug-mode side effects. |
+| `-DFEATURE_POLYMOD_MODS` | Force-enable mod loading support via Polymod. |
+| `-DNO_FEATURE_POLYMOD_MODS` | Force-disable mod loading support. |
+| `-DREDIRECT_ASSETS_FOLDER` | Load assets from the project's `assets/` folder rather than the export directory. Ideal for rapid iteration; **do not** use in distributable builds. |
+| `-DNO_REDIRECT_ASSETS_FOLDER` | Force-disable asset redirection. |
+| `-DFEATURE_DISCORD_RPC` | Force-enable Discord Rich Presence support. |
+| `-DNO_FEATURE_DISCORD_RPC` | Force-disable Discord Rich Presence support. |
+| `-DFEATURE_VIDEO_PLAYBACK` | Force-enable video cutscene support via hxvlc. |
+| `-DNO_FEATURE_VIDEO_PLAYBACK` | Force-disable video cutscene support. |
+| `-DFEATURE_SCREENSHOTS` | Force-enable the in-game screenshot feature. |
+| `-DNO_FEATURE_SCREENSHOTS` | Force-disable the in-game screenshot feature. |
+| `-DFEATURE_CHART_EDITOR` | Force-enable the chart editor in the Debug menu. |
+| `-DNO_FEATURE_CHART_EDITOR` | Force-disable the chart editor. |
+| `-DFEATURE_STAGE_EDITOR` | Force-enable the experimental stage editor. |
+| `-DFEATURE_GHOST_TAPPING` | Force-enable the experimental ghost-tapping change to the anti-mash system. |
+
+**Example — debug build with Discord RPC disabled:**
+
+```bash
+lime test windows -debug -DNO_FEATURE_DISCORD_RPC
+```
+
+<Note>
+  If you hit errors during any of the steps above, see the [Troubleshooting guide](/troubleshooting) for solutions to the most common compilation problems.
+</Note>

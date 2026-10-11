@@ -1,72 +1,74 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mintlify Starter Kit",
+  "name": "Friday Night Funkin'",
+  "theme": "almond",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#eb7522",
+    "light": "#f2d05f",
+    "dark": "#959592"
   },
-  "favicon": "/favicon.svg",
-  "navigation": {
-    "pages": [
-      {
-        "group": "Getting Started",
-        "pages": [
-          "index",
-          "quickstart"
-        ]
-      }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
+  "favicon": "https://media.brand.dev/835bb2ef-b8ee-4f6c-bb8e-b5d90a7ad7b1.jpg",
   "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:support@mintlify.com"
-      }
-    ],
     "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://app.mintlify.com"
+      "type": "github",
+      "href": "https://github.com/FunkinCrew/funkin"
     }
-  },
-  "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
   },
   "footer": {
     "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
+      "github": "https://github.com/FunkinCrew/funkin"
     }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guide",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "compiling",
+              "compiling-mobile",
+              "troubleshooting"
+            ]
+          },
+          {
+            "group": "Gameplay",
+            "pages": [
+              "gameplay/overview",
+              "gameplay/scoring",
+              "gameplay/preferences"
+            ]
+          },
+          {
+            "group": "Modding",
+            "pages": [
+              "modding/overview",
+              "modding/installing-mods",
+              "modding/mod-structure",
+              "modding/scripted-classes"
+            ]
+          },
+          {
+            "group": "Chart Format",
+            "pages": [
+              "charts/fnfc-format",
+              "charts/song-metadata",
+              "charts/chart-data",
+              "charts/song-events"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "contributing/guide",
+              "contributing/code-style",
+              "contributing/debug-tools"
+            ]
+          }
+        ]
+      }
+    ]
   }
 }

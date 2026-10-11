@@ -1,0 +1,143 @@
+---
+title: "FNF Debug Tools: Hotkeys, Hot Reload, and Tracy Profiler"
+sidebarTitle: "Debug Tools"
+description: "Complete reference for FNF debug hotkeys by game state, hot reload with F5, the Chart Editor shortcut, and the Tracy instrumentation profiler."
+---
+
+Friday Night Funkin' ships with a range of built-in developer tools that make it easier to test changes, diagnose performance issues, and iterate on charts and stages without restarting the game. Most of these tools are only exposed in debug builds of the game — compiling with `-debug` is required to access them.
+
+<Warning>
+  The majority of debug hotkeys and tools described on this page **require a `-debug` build**. They will not work in release builds downloaded from Newgrounds or itch.io. See the [Compilation Guide](/compiling) for instructions on building from source.
+</Warning>
+
+## Debug Hotkeys
+
+The hotkeys are organised below by the game state in which they are active.
+
+### Any State
+
+These hotkeys work regardless of which screen or menu is currently active.
+
+| Hotkey | Name | Description |
+|---|---|---|
+| `INSERT` | **Memory Garbage Collection** | Immediately triggers memory garbage collection. |
+| `F2` | **Overlay** | Enables the Flixel debug overlay, which has partial support for scripting. |
+| `F3` | **Screenshot** | Takes a screenshot and saves it to the local `screenshots/` directory. |
+| `F4` | **Eject** | Forcibly switches to the Main Menu with no transition. Useful if you're stuck in a level. |
+| `F5` | **Hot Reload** | Reloads all scripts and data files, then restarts the current state. See [Hot Reload](#hot-reload) below. |
+| `CTRL-ALT-SHIFT-L` | **Force Crash** | Immediately crashes the game with a detailed crash log and stack trace. |
+
+<Note>
+  `F3` (Screenshot) **works in release builds** as well as debug builds. It's the only hotkey on this page that does not require compiling with `-debug`.
+</Note>
+
+### Play State
+
+These hotkeys are available during active gameplay (while a song is playing).
+
+| Hotkey | Name | Description |
+|---|---|---|
+| `H` | **Hide UI** | Makes the HUD invisible. Also works in the Pause Menu — great for clean screenshots. |
+| `1` | **End Song** | Immediately ends the current song. Goes to the Results screen in Freeplay, or the next song in Story Mode. |
+| `2` | **Gain Health** | Adds 10% health to the player. |
+| `3` | **Lose Health** | Subtracts 5% health from the player. |
+| `PAGEUP` *(macOS: Fn-Up)* | **Forwards Time Travel** | Jumps forward 2 sections. Hold `SHIFT` to jump 20 sections. |
+| `PAGEDOWN` *(macOS: Fn-Down)* | **Backwards Time Travel** | Jumps backward 2 sections. Hold `SHIFT` to jump 20 sections. |
+| `CHART` hotkey | **Open Chart Editor** | Opens the Chart Editor with the current song already loaded. |
+| `STAGE` hotkey | **Open Stage Editor** | Opens the legacy Stage Editor overlay. |
+
+### Freeplay State
+
+These hotkeys are available on the Freeplay song selection screen.
+
+| Hotkey | Name | Description |
+|---|---|---|
+| `P` | **Switch Character** | Reopens Freeplay as the other playable character (switches between BF and Pico). |
+| `T` | **Test Rank Animation** | Plays the Gold Perfect rank animation on the currently selected song. |
+| `SHIFT-ACCEPT` | **Botplay Mode** | Starts the selected song with Botplay enabled. |
+| `CTRL-ACCEPT` | **Mirrored Mode** | Starts the selected song with notes mirrored. |
+| `CTRL-Switch Song` | **Alt Instrumental Preview** | Plays the first unlocked alternate instrumental as the song preview. |
+
+### Main Menu
+
+These hotkeys are available on the Main Menu screen. Most are restricted to debug builds.
+
+| Hotkey | Name | Description |
+|---|---|---|
+| `~` | **Debug Menu** | Opens a menu for accessing the Chart Editor and other work-in-progress editors. Rebindable in Options. |
+| `SHIFT-ACCEPT` | **Open Freeplay as Pico** | Opens the Freeplay menu with Pico set as the playable character. |
+| `CTRL-ALT-SHIFT-W` | **All Access** | Unlocks all songs in Freeplay. *(Debug only)* |
+| `CTRL-ALT-SHIFT-M` | **No More Access** | Re-locks all songs except those unlocked by default. *(Debug only)* |
+| `CTRL-ALT-SHIFT-R` | **Great Score?** | Gives the user a hypothetical overridden score and tests the Golden Perfect rank display. *(Debug only)* |
+| `CTRL-ALT-SHIFT-P` | **Character Unlock Screen** | Forces the Character Select screen to play Pico's unlocking animation. *(Debug only)* |
+| `CTRL-ALT-SHIFT-N` | **Character Not Seen** | Marks all characters as not seen and re-enables BF's new character animation in Freeplay. *(Debug only)* |
+| `CTRL-ALT-SHIFT-E` | **Dump Save Data** | Prompts you to export your save data as a JSON file for inspection. *(Debug only)* |
+
+---
+
+## Hot Reload
+
+Pressing `F5` during any debug build triggers a **hot reload**: the game reloads all scripts and data files from the `assets/` folder, then restarts the current state. This means you can edit stage layout files, character animation data, and other assets while the game is running and immediately see the results — no full restart needed.
+
+```text
+F5  →  Reload scripts and data files  →  Restart current state
+```
+
+**Known bug:** Hot reload currently does **not** reset song charts or song scripts. Everything else — stage layout data, character animation data, event definitions — should be refreshed correctly.
+
+---
+
+## Tracy Profiler
+
+Tracy is a powerful **instrumentation-based profiler** that gives you deep visibility into what the game is doing at any given moment: which functions are running, how long each one takes, and how memory is being allocated and freed. It is the most effective tool for diagnosing and resolving frame-rate drops or other performance issues.
+
+Tracy support was added to Funkin' in **v0.5.1**.
+
+### Setup
+
+<Steps>
+  <Step title="Download Tracy">
+    Download the Tracy profiler from the [official GitHub repository](https://github.com/wolfpld/tracy). Pre-built binaries are available for Windows, macOS, and Linux.
+  </Step>
+  <Step title="Build the game with the Tracy flag">
+    Compile Funkin' with both the `-debug` flag and the `FEATURE_DEBUG_TRACY` compile define:
+
+    ```bash
+    lime build windows -debug -DFEATURE_DEBUG_TRACY
+    ```
+
+    Replace `windows` with your target platform (`mac`, `linux`, etc.) as needed.
+  </Step>
+  <Step title="Start Tracy and connect">
+    Launch the Tracy application and click **Connect**. Tracy will pause and wait for a compatible process to start.
+  </Step>
+  <Step title="Start the game">
+    Launch your freshly-built Funkin' executable. Tracy will automatically detect it and begin recording profiling data. You'll see the live timeline populate in real time.
+  </Step>
+</Steps>
+
+### Reading the Tracy Timeline
+
+Once connected, Tracy shows a frame-by-frame timeline of every instrumented function call. You can zoom into individual frames to see exactly which functions are consuming the most time, inspect memory allocation zones, and identify spikes that correspond to gameplay hitches.
+
+---
+
+## Build Flags Reference
+
+The following compile-time flags are most relevant when building for debugging or development purposes.
+
+| Flag | Effect |
+|---|---|
+| `-debug` | Enables debug build mode. Unlocks all debug hotkeys and verbose logging. |
+| `-DGITHUB_BUILD` | Marks the build as a GitHub/CI build. Affects version strings and certain runtime checks. |
+| `-DFEATURE_DEBUG_TRACY` | Enables Tracy profiler instrumentation. Must be combined with `-debug`. |
+
+Flags are passed to `lime build` as space-separated arguments:
+
+```bash
+# Standard debug build
+lime build windows -debug
+
+# Debug build with Tracy profiling
+lime build windows -debug -DFEATURE_DEBUG_TRACY
+```

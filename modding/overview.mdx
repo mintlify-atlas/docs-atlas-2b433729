@@ -1,0 +1,102 @@
+---
+title: "Modding Overview: Extend Friday Night Funkin'"
+sidebarTitle: "Overview"
+description: "Learn how Friday Night Funkin' uses Polymod to load mods, what mods can do, how asset merging works, and where to find the full modding documentation."
+---
+
+Friday Night Funkin' ships with a first-class modding system powered by [Polymod](https://github.com/larsiusprime/polymod), an atomic modding framework for Haxe games. Mods live in their own self-contained folders, are discovered automatically at startup, and can do everything from swapping a single image to adding entirely new songs, characters, and scripted gameplay logic — all without touching the base game files.
+
+<Note>
+  HTML5/web builds of Friday Night Funkin' do **not** support mods. Mods are only available on native desktop and mobile platforms (Windows, Linux, macOS, Android, and iOS).
+</Note>
+
+## What is Polymod?
+
+Polymod is an atomic, Haxe-native modding library originally developed for [Defenders Quest II](https://github.com/larsiusprime/polymod). FNF integrates it via `PolymodHandler`, a wrapper that configures the framework at boot, feeds it the list of mods the player has enabled, and re-initialises it whenever assets need to be reloaded (for example, when pressing **F5** in debug builds).
+
+Polymod handles:
+
+- **Asset merging** — mod files are layered on top of the base game's asset tree. When multiple mods provide the same file, the last mod in the load order wins.
+- **Scripted classes** — `.hxc` HScript files inside a mod folder are parsed at runtime and can define or extend Haxe classes without recompiling the game.
+- **Parse rules** — Polymod knows how to merge JSON objects and append lines to text files, so mods can safely extend data files instead of fully replacing them.
+
+## What Mods Can Do
+
+| Capability | Example |
+|---|---|
+| Override existing assets | Replace a character sprite sheet |
+| Add new assets | Ship a brand-new song with vocals and instrumental |
+| Override JSON data files | Change a character's animation list |
+| Append text files | Add lines to `introText.txt` |
+| Define scripted characters | Custom rendering logic for a new character |
+| Define scripted stages | New stage with parallax backgrounds |
+| Define scripted songs | Override per-song gameplay behaviour |
+| Define custom chart events | Trigger arbitrary code at a specific beat |
+| Run persistent modules | Global scripts that listen to every game event |
+
+## How PolymodHandler Works
+
+When the game boots, `PolymodHandler.loadEnabledMods()` is called. It:
+
+1. Creates the `mods/` folder next to the executable if it does not yet exist.
+2. Calls `Polymod.scan()` to read each mod's `_polymod_meta.json` and filter out mods whose `api_version` is outside the supported range (`>=0.8.0 <0.9.0`).
+3. Calls `Polymod.init()` with the ordered list of mod directories, registering all `.hxc` scripted class files in the process.
+4. After Polymod initialises, all game registries (songs, characters, stages, events, …) are reloaded so they pick up data contributed by mods.
+
+```haxe
+// Simplified from source/funkin/modding/PolymodHandler.hx
+var loadedModList:Array<ModMetadata> = polymod.Polymod.init({
+  modRoot: 'mods',
+  dirs: dirs,              // ordered list of enabled mod directory names
+  framework: OPENFL,
+  apiVersionRule: API_VERSION_RULE,
+  errorCallback: PolymodErrorHandler.onPolymodError,
+  useScriptedClasses: true,
+  parseRules: buildParseRules(),
+  ignoredFiles: buildIgnoreList(),
+});
+```
+
+## Mod Priority and Load Order
+
+Mods are loaded in the order the player has arranged them in the in-game Mods menu. The **last** mod in the list has the **highest priority**: if two mods provide the same file, the later mod's version is used.
+
+For scripted modules specifically, each `Module` subclass exposes a `priority` integer (default `1000`). Lower numbers are executed first, so a module with `priority = 1` receives events before one with `priority = 1000`.
+
+```haxe
+// Lower priority number → runs earlier
+public var priority(default, set):Int = 1000;
+```
+
+## Security Sandbox
+
+Scripts are run inside a sandboxed HScript interpreter. A number of dangerous APIs are explicitly blocked:
+
+- `Sys` (arbitrary process execution)
+- `sys.*` (file system access)
+- `cpp.Lib`, `lime.system.CFFI`, `lime.system.JNI` (native code loading)
+- `haxe.Http`, `openfl.desktop.NativeProcess`
+- Direct access to raw save data fields
+
+This means modders get access to the full HaxeFlixel API while the game is protected against malicious scripts.
+
+## Further Reading
+
+For the full scripting API reference, chart format documentation, and official tutorials, visit the FNF Modding Documentation site:
+
+👉 **[funkincrew.github.io/funkin-modding-docs](https://funkincrew.github.io/funkin-modding-docs/)**
+
+<CardGroup cols={2}>
+  <Card title="Installing Mods" icon="download" href="/modding/installing-mods">
+    Step-by-step instructions for every platform — Windows, Linux, macOS, Android, and iOS.
+  </Card>
+  <Card title="Mod Structure" icon="folder-tree" href="/modding/mod-structure">
+    Folder layout, `_polymod_meta.json` schema, and how asset overrides work.
+  </Card>
+  <Card title="Scripted Classes" icon="code" href="/modding/scripted-classes">
+    HScript powered classes: modules, characters, stages, songs, events, and more.
+  </Card>
+  <Card title="Official Modding Docs" icon="book-open" href="https://funkincrew.github.io/funkin-modding-docs/">
+    The complete external modding reference maintained by the FunkinCrew.
+  </Card>
+</CardGroup>

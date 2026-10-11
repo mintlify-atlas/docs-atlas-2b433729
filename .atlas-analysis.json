@@ -1,0 +1,92 @@
+{
+  "projectType": "general",
+  "projectName": "Friday Night Funkin'",
+  "projectDescription": "Friday Night Funkin' is an open-source rhythm game built with HaxeFlixel, featuring a full chart editor, a Polymod-based modding system, and multi-platform support including Windows, macOS, Linux, Android, iOS, and HTML5.",
+  "theme": "almond",
+  "primaryColor": "#eb7522",
+  "lightColor": "#f2d05f",
+  "darkColor": "#959592",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guide",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "compiling",
+              "compiling-mobile",
+              "troubleshooting"
+            ]
+          },
+          {
+            "group": "Gameplay",
+            "pages": [
+              "gameplay/overview",
+              "gameplay/scoring",
+              "gameplay/preferences"
+            ]
+          },
+          {
+            "group": "Modding",
+            "pages": [
+              "modding/overview",
+              "modding/installing-mods",
+              "modding/mod-structure",
+              "modding/scripted-classes"
+            ]
+          },
+          {
+            "group": "Chart Format",
+            "pages": [
+              "charts/fnfc-format",
+              "charts/song-metadata",
+              "charts/chart-data",
+              "charts/song-events"
+            ]
+          },
+          {
+            "group": "Contributing",
+            "pages": [
+              "contributing/guide",
+              "contributing/code-style",
+              "contributing/debug-tools"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Full rhythm gameplay with 4-key strumlines, BPM sync, and multiple difficulty levels",
+    "Polymod-based modding system supporting custom songs, characters, stages, and scripts",
+    "Built-in Chart Editor (FNFC format) with audio import, variations, and export",
+    "PBOT1 timing-based scoring with Sick/Good/Bad/Shit judgements and rank system",
+    "Multi-platform builds: Windows, macOS, Linux, Android, iOS, and HTML5",
+    "Scripted class system allowing mods to extend HaxeFlixel types via HScript",
+    "Song variations system for Erect/Nightmare difficulty alternate tracks",
+    "Conductor class for precise musical timing with BPM change support",
+    "Tracy profiling integration and comprehensive debug hotkey system",
+    "Discord Rich Presence, screenshot capture, and hot-reload asset support"
+  ],
+  "publicApiSurface": [
+    "Conductor.instance — singleton providing beat/step/measure signals and song position",
+    "Conductor.beatHit / stepHit / measureHit — FlxSignal hooks for musical timing",
+    "Scoring.scoreNote(msTiming, scoringSystem) — note score calculation",
+    "Scoring.judgeNote(msTiming, scoringSystem) — note judgement string",
+    "ScoringSystem enum — LEGACY, WEEK7, PBOT1",
+    "Preferences — static fields: framerate, downscroll, naughtyness, ghostTapping, etc.",
+    "PolymodHandler — loads and manages Polymod mods from the mods/ directory",
+    "IScriptedClass / ScriptedModule — HScript-based mod scripting interface",
+    "ScriptedFlxSprite, ScriptedFlxState, ScriptedFlxSubState, etc. — scriptable base classes",
+    "ScriptedCharacter, ScriptedStage, ScriptedBopper, ScriptedSong — game object scripting",
+    "ScriptedSongEvent — custom song event scripting",
+    "Song metadata JSON schema (version 2.2.2): songName, artist, timeChanges, playData",
+    "Chart data JSON schema (version 2.0.0): note data, song events per variation",
+    "FNFC file format — ZIP bundle containing manifest.json, audio .ogg files, metadata and chart JSON",
+    "_polymod_meta.json — mod manifest: title, description, api_version, mod_version, license",
+    "Build flags: -DFEATURE_POLYMOD_MODS, -DFEATURE_CHART_EDITOR, -DFEATURE_DISCORD_RPC, -DFEATURE_VIDEO_PLAYBACK, -DREDIRECT_ASSETS_FOLDER",
+    "lime test <platform> — primary build command (windows, mac, linux, html5, android, ios)"
+  ]
+}

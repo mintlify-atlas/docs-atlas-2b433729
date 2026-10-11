@@ -1,0 +1,171 @@
+---
+title: "Troubleshooting Friday Night Funkin' Compilation Errors"
+sidebarTitle: "Troubleshooting"
+description: "Solutions to the most common errors encountered when compiling Friday Night Funkin' from source, including Lime, hxcpp, and linking issues."
+---
+
+If you run into a problem while compiling Friday Night Funkin', check this page before opening a GitHub issue. The errors below cover the vast majority of problems reported by the community. Each entry lists the error trigger, its root cause, and the exact fix.
+
+<Note>
+  Do **not** open a GitHub issue for compilation problems. Check this guide first, and if your issue is not listed here, ask in the [FNF Discord](https://discord.gg/funkin) `#compiling-help` channel.
+</Note>
+
+## General Errors
+
+<AccordionGroup>
+
+  <Accordion title="Output contains WARNING or (WDeprecated) messages">
+    **Cause:** These messages are informational deprecation warnings emitted by Haxe or one of the library dependencies. They do not represent a failure.
+
+    **Fix:** No action required. These warnings will not disrupt compilation and can be safely ignored.
+  </Accordion>
+
+  <Accordion title="'This version of hxcpp … Would you like to do this now [y/n]'">
+    **Cause:** hxcpp has detected that its compiled tools are out of date and is asking permission to rebuild them.
+
+    **Fix:** Type `y` into the console and press **Enter**. hxcpp will recompile its tools and then continue the build automatically.
+  </Accordion>
+
+  <Accordion title="Weird macro error with a very tall call stack">
+    **Cause:** This is a known issue caused by Polymod's macro system interacting with a pre-existing compile error elsewhere in the project. The macro error is a secondary symptom, not the root cause.
+
+    **Fix:** Restart Visual Studio Code (or your IDE) completely and try building again. Once the primary compile error is resolved, the macro call-stack error should not reappear.
+
+    <Note>
+      There is an active bounty open for a proper fix to this issue. If you are interested in investigating, check the FunkinCrew GitHub repository for details.
+    </Note>
+  </Accordion>
+
+  <Accordion title="'Get Thread Context Failed'">
+    **Cause:** The debugger cannot attach to the build process because the system is under heavy CPU or memory pressure from other applications.
+
+    **Fix:** Close other resource-intensive applications (browsers with many tabs, video players, other IDEs, etc.) and start the build again.
+  </Accordion>
+
+  <Accordion title="'Type not found: T1'">
+    **Cause:** This error is thrown by the `json2object` library. It means the data type of an `@:default` annotation somewhere in the codebase is incorrect, or you are using a type that `json2object` does not support.
+
+    **Fix:** Check whether `flixel.util.typeLimit.OneOfTwo` is used as an `@:default` type — this type is **not** supported by `json2object`. Replace it with a supported type. If you have not modified any source files, try deleting `.haxelib` and re-running `hmm install` to rule out a corrupt library installation.
+  </Accordion>
+
+  <Accordion title="'Class lists not properly generated. Try cleaning out your export folder, restarting your IDE, and rebuilding your project.'">
+    **Cause:** This is a bug specific to the **HTML5** target. The class list used by the JavaScript runtime becomes stale or corrupted.
+
+    **Fix:** Follow the steps listed in the error message exactly, in this order:
+
+    1. Delete the `export/` folder from the project root.
+    2. Restart your IDE.
+    3. Run `lime test html5` again.
+  </Accordion>
+
+  <Accordion title="'LINK : fatal error LNK1201: error writing to program database'">
+    **Cause:** The PDB (Program Database) debug symbols file inside your `export/` folder is either locked by another process, has grown beyond the 4 GB size limit, or the build process lacks write permissions to the path.
+
+    **Fix:** Delete the `export/` folder from the project root and rebuild from scratch:
+
+    ```bash
+    # From the funkin/ project directory
+    rm -rf export/
+    lime test windows
+    ```
+
+    If the error reappears, ensure no antivirus or indexing software is locking files inside the `export/` directory.
+  </Accordion>
+
+  <Accordion title="'error: RPC failed; curl 92 HTTP/2 stream 0 was not closed cleanly: PROTOCOL_ERROR (err 1)'">
+    **Cause:** This error occurs during `git clone` or `git submodule update` when the network connection is unstable or the server drops the HTTP/2 stream before the transfer completes.
+
+    **Fix:** Increase Git's HTTP send/receive buffer size and retry:
+
+    ```bash
+    git config --global http.postBuffer 4096M
+    ```
+
+    Then re-run the clone or submodule command that failed.
+  </Accordion>
+
+  <Accordion title="Repository is missing an 'assets' folder, or 'assets' folder is empty">
+    **Cause:** The repository was not cloned correctly. This usually happens when the ZIP download button on GitHub was used instead of `git clone`, or when the `git submodule update` step was skipped.
+
+    **Fix:** Copy the full path to your `funkin/` folder and run the submodule command from inside it:
+
+    ```bash
+    cd C:\path\to\funkin   # replace with your actual path
+    git submodule update --init --recursive
+    ```
+
+    Then continue from **Step 4** of the [compiling guide](/compiling).
+  </Accordion>
+
+  <Accordion title="Miscellaneous compilation issues not covered above (bad library versions)">
+    **Cause:** One or more Haxe libraries were installed at an incorrect version — either installed manually with `haxelib install` instead of `hmm install`, or corrupted by a partial/failed previous install.
+
+    **Fix:** Delete the local `.haxelib` folder to wipe all installed libraries, then reinstall them fresh with hmm:
+
+    ```bash
+    rm -rf .haxelib/      # macOS/Linux
+    rmdir /s /q .haxelib  # Windows Command Prompt
+    hmm install
+    ```
+
+    Then continue from **Step 5** of the [compiling guide](/compiling).
+  </Accordion>
+
+</AccordionGroup>
+
+---
+
+## Lime-Related Errors
+
+<AccordionGroup>
+
+  <Accordion title="Segmentation fault / crash after 'Done mapping time changes: [SongTimeChange(0ms,102bpm)]'">
+    **Cause:** You have the **official upstream Lime** installed instead of **FunkinCrew's patched fork**. The upstream Lime is missing patches required for FNF's audio timing system, causing a segmentation fault at runtime.
+
+    **Fix:** Reinstall Lime through `hmm` to guarantee you get FunkinCrew's version. The `-f` flag forces a reinstall even if the library is already present:
+
+    ```bash
+    hmm reinstall -f lime
+    ```
+
+    <Warning>
+      Never install or update Lime with plain `haxelib install lime`. Always use `hmm` to manage Lime for this project.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="'Uncaught exception — Could not find lime.ndll' / 'Advanced users may run lime rebuild cpp instead'">
+    **Cause:** The pre-built native Lime binaries (`lime.ndll`) are either missing or were compiled against a different version of GLibC than the one on your system (common on Linux distributions with an older GLibC).
+
+    **Fix (Linux — rebuild from source):**
+
+    Run the following commands from the project root to rebuild the Lime native binaries for your system. Install any missing system packages first:
+
+    ```bash
+    cd .haxelib/lime/git
+    git submodule init
+    git submodule sync
+    git submodule update
+    cd ../../..
+
+    # Install required system libraries (Ubuntu/Debian — adjust for your distro)
+    sudo apt install libgl1-mesa-dev libglu1-mesa-dev g++ g++-multilib \
+      gcc-multilib libasound2-dev libx11-dev libxext-dev libxi-dev \
+      libxrandr-dev libxinerama-dev libpulse-dev
+
+    lime rebuild cpp -64 -release -clean
+    ```
+
+    **Fix (all platforms — download pre-built binaries):**
+
+    If rebuilding from source is not an option, download the pre-built `lime.ndll` binaries from the [FunkinCrew Lime repository](https://github.com/FunkinCrew/lime/tree/dev-funkin/ndll).
+
+    Copy the appropriate binary to:
+
+    ```
+    .haxelib/lime/git/ndll/<PLATFORM>64/
+    ```
+
+    Where `<PLATFORM>` is one of `Windows`, `Linux`, or `MacOS`.
+  </Accordion>
+
+</AccordionGroup>

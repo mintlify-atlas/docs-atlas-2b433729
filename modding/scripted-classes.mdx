@@ -1,0 +1,325 @@
+---
+title: "Scripted Classes: HScript Modding API for FNF"
+sidebarTitle: "Scripted Classes"
+description: "How Friday Night Funkin' scripted classes work: IScriptedClass, ScriptedModule, and every available base class for characters, stages, songs, and events."
+---
+
+Scripted classes are the heart of Friday Night Funkin's scripting system. They let you write `.hxc` files inside your mod folder that define real Haxe classes at runtime — without recompiling the game. Powered by [Polymod's HScript integration](https://github.com/larsiusprime/polymod), each scripted class is a full subclass of a game type: you can override methods, react to events, manipulate sprites, and interact with the game world exactly as you would in compiled code.
+
+## How It Works
+
+When Polymod initialises, it scans every `.hxc` file in every enabled mod folder and parses them with the HScript interpreter. Each file is expected to declare exactly one class. Polymod registers those classes by name so the game can instantiate them later with a dedicated `init` factory method.
+
+```haxe
+// Instantiate a scripted FlxSprite subclass called "MyFireEffect"
+var sprite = ScriptedFlxSprite.init('MyFireEffect', x, y);
+```
+
+The `init` pattern is the same for every scripted class family — the first argument is always the **class name string** as declared in your `.hxc` file.
+
+## IScriptedClass — The Base Interface
+
+All scriptable game objects implement `IScriptedClass`, which defines the core lifecycle callbacks every script receives:
+
+```haxe
+interface IScriptedClass
+{
+  public function onScriptEvent(event:ScriptEvent):Void;
+  public function onCreate(event:ScriptEvent):Void;
+  public function onDestroy(event:ScriptEvent):Void;
+  public function onUpdate(event:UpdateScriptEvent):Void;
+}
+```
+
+Specialised sub-interfaces extend this with domain-specific callbacks:
+
+| Interface | Extra callbacks |
+|---|---|
+| `IStateChangingScriptedClass` | `onStateChangeBegin/End`, `onSubStateOpen/CloseBegin/End`, `onFocusLost/Gained` |
+| `IPlayStateScriptedClass` | Note hit/miss, countdown, song start/end, game over, song events, BPM sync |
+| `IFreeplayScriptedClass` | Capsule selection, difficulty switch, song selection, freeplay open/close |
+| `ICharacterSelectScriptedClass` | Character select/deselect/confirm |
+| `IDialogueScriptedClass` | Dialogue start/line/complete/skip/end |
+| `IBPMSyncedScriptedClass` | `onStepHit`, `onBeatHit` |
+| `INoteScriptedClass` | `onNoteIncoming`, `onNoteHit`, `onNoteMiss`, `onNoteHoldDrop` |
+
+## ScriptedModule — Persistent Global Scripts
+
+`ScriptedModule` is the most powerful scripted class type. A module is instantiated **once at startup** and persists for the entire game session, receiving every event dispatched by every game state.
+
+```haxe
+// ScriptedModule.hx (source)
+@:hscriptClass
+class ScriptedModule extends Module implements HScriptedClass {}
+```
+
+`Module` implements `IPlayStateScriptedClass`, `IStateChangingScriptedClass`, `IFreeplayScriptedClass`, and `ICharacterSelectScriptedClass`, so a single module can react to gameplay notes, menu navigation, state transitions, and more.
+
+### Writing a Module
+
+Create a `.hxc` file in your mod folder and extend `Module`:
+
+```haxe
+// mods/my-mod/MyModule.hxc
+import funkin.modding.module.Module;
+import funkin.modding.events.ScriptEvent;
+
+class MyModule extends Module
+{
+  public function new()
+  {
+    super('MyModule');   // pass a unique module ID
+  }
+
+  override function onCreate(event:ScriptEvent):Void
+  {
+    trace('MyModule created!');
+  }
+
+  override function onSongStart(event:ScriptEvent):Void
+  {
+    trace('A song just started!');
+  }
+
+  override function onNoteHit(event:HitNoteScriptEvent):Void
+  {
+    trace('Note hit: ' + event.note);
+  }
+}
+```
+
+### Module Priority
+
+Modules are called in ascending `priority` order. Lower numbers run first. The default priority is `1000`.
+
+```haxe
+public function new()
+{
+  super('MyEarlyModule', 100); // runs before modules with priority 1000
+}
+```
+
+### Module State Scoping
+
+You can restrict a module to a specific game state so it only receives events while that state is active:
+
+```haxe
+public function new()
+{
+  super('MyPlayModule', 1000, { state: funkin.play.PlayState });
+}
+```
+
+## HaxeFlixel Base Classes
+
+These scripted classes let you subclass core HaxeFlixel types in scripts. They live in `funkin.modding.base` and exist solely to provide scriptable entry points — most are not used directly by the game itself.
+
+<Note>
+  These classes are kept alive by the compiler (immune to dead-code elimination) specifically so mods can use them.
+</Note>
+
+| Scripted Class | Extends | Use Case |
+|---|---|---|
+| `ScriptedFlxBasic` | `flixel.FlxBasic` | Lightest scriptable Flixel object; update/draw loop only |
+| `ScriptedFlxObject` | `flixel.FlxObject` | Object with position, velocity, and collision |
+| `ScriptedFlxSprite` | `flixel.FlxSprite` | Sprite with animation support |
+| `ScriptedFlxSpriteGroup` | `FlxTypedSpriteGroup<FlxSprite>` | Group of sprites treated as one unit |
+| `ScriptedFlxTypedGroup` | `FlxTypedGroup<Dynamic>` | Generic typed group of any Flixel objects |
+| `ScriptedFlxState` | `flixel.FlxState` | Full game state (screen) |
+| `ScriptedFlxSubState` | `flixel.FlxSubState` | Overlay sub-state (pause menus, etc.) |
+| `ScriptedFlxTransitionableState` | `FlxTransitionableState` | Game state with built-in transition support |
+| `ScriptedFlxRuntimeShader` | `FlxRuntimeShader` | Custom GLSL shader applied to a sprite |
+| `ScriptedFlxStrip` | `flixel.FlxStrip` | Texture-mapped triangle strip sprite |
+
+### Instantiation Example
+
+```haxe
+// In a Module or another scripted class:
+import funkin.modding.base.ScriptedFlxSprite;
+
+var mySprite = ScriptedFlxSprite.init('MyFireEffect', 100.0, 200.0);
+FlxG.state.add(mySprite);
+```
+
+## Game Object Scripted Classes
+
+These classes extend FNF-specific game objects. Each one maps to a particular part of the gameplay pipeline.
+
+### ScriptedCharacter Variants
+
+Characters have several render modes. Pick the one that matches how your character is built:
+
+| Scripted Class | Extends | When to Use |
+|---|---|---|
+| `ScriptedSparrowCharacter` | `SparrowCharacter` | Sparrow/Packer atlas sprite sheet (most common) |
+| `ScriptedMultiSparrowCharacter` | `MultiSparrowCharacter` | Multiple Sparrow atlases stitched together |
+| `ScriptedPackerCharacter` | `PackerCharacter` | Packer texture atlas format |
+| `ScriptedAnimateAtlasCharacter` | `AnimateAtlasCharacter` | Adobe Animate texture atlas export |
+| `ScriptedMultiAnimateAtlasCharacter` | `MultiAnimateAtlasCharacter` | Multiple Animate atlases combined |
+| `ScriptedBaseCharacter` | `BaseCharacter` | Full custom rendering (advanced) |
+
+```haxe
+// mods/my-mod/characters/MyCoolCharacter.hxc
+import funkin.play.character.SparrowCharacter;
+
+class MyCoolCharacter extends SparrowCharacter
+{
+  public function new()
+  {
+    super('my-cool-character');  // matches the character data JSON id
+  }
+
+  override function onCreate(event:ScriptEvent):Void
+  {
+    super.onCreate(event);
+    trace('MyCoolCharacter spawned!');
+  }
+}
+```
+
+### ScriptedStage
+
+Custom stage environments. Override `onCreate` to add your background sprites and props.
+
+```haxe
+// mods/my-mod/stages/MyStage.hxc
+import funkin.play.stage.Stage;
+
+class MyStage extends Stage
+{
+  public function new()
+  {
+    super('my-stage');  // matches the stage data JSON id
+  }
+
+  override function buildStage():Void
+  {
+    super.buildStage();
+    // Add custom background elements here
+  }
+}
+```
+
+Instantiated via:
+```haxe
+var stage = ScriptedStage.init('MyStage', 'my-stage');
+```
+
+### ScriptedBopper
+
+Background characters that bob to the beat. Extend `Bopper` and attach it to a stage.
+
+```haxe
+import funkin.play.stage.Bopper;
+
+class MyCrowdMember extends Bopper
+{
+  public function new()
+  {
+    super(16); // bop every 16th note
+  }
+}
+```
+
+### ScriptedSong
+
+Override per-song behaviour — useful for cutscenes, mid-song events, or custom scoring logic.
+
+```haxe
+// mods/my-mod/songs/MySong.hxc
+import funkin.play.song.Song;
+
+class MySong extends Song
+{
+  public function new()
+  {
+    super('my-song');
+  }
+
+  override function onSongStart(event:ScriptEvent):Void
+  {
+    super.onSongStart(event);
+    trace('My custom song started!');
+  }
+}
+```
+
+### ScriptedSongEvent
+
+Custom chart events that trigger at a specific beat. Override `handleEvent` to define what happens, `getTitle` for the editor label, and `getEventSchema` for the editor form.
+
+```haxe
+// mods/my-mod/events/MyFlashEvent.hxc
+import funkin.play.event.SongEvent;
+import funkin.play.event.SongEventData;
+
+class MyFlashEvent extends SongEvent
+{
+  public function new()
+  {
+    super('MyFlashEvent');
+  }
+
+  override function handleEvent(data:SongEventData):Void
+  {
+    FlxG.cameras.flash(0xFFFFFFFF, 0.5);
+  }
+
+  override function getTitle():String
+  {
+    return 'Screen Flash';
+  }
+}
+```
+
+### ScriptedStrumline
+
+Custom note lanes. Extend `Strumline` to override note rendering, hit detection, or receptor animations.
+
+```haxe
+import funkin.play.notes.Strumline;
+
+class MyStrumline extends Strumline
+{
+  public function new(ratingGroup, noteData, isPlayer, isGhost)
+  {
+    super(ratingGroup, noteData, isPlayer, isGhost);
+  }
+}
+```
+
+## Quick Reference
+
+```haxe
+// Instantiate any scripted class by name:
+ScriptedFlxSprite.init('ClassName', ...constructorArgs);
+ScriptedFlxState.init('ClassName');
+ScriptedFlxSubState.init('ClassName');
+ScriptedFlxSpriteGroup.init('ClassName');
+
+ScriptedSparrowCharacter.init('ClassName', 'charId');
+ScriptedStage.init('ClassName', 'stageId');
+ScriptedBopper.init('ClassName', beatsPerStep);
+ScriptedSong.init('ClassName', 'songId');
+ScriptedSongEvent.init('ClassName', 'EventType');
+ScriptedStrumline.init('ClassName', ratingGroup, noteData, isPlayer, isGhost);
+```
+
+<Tip>
+  The class name you pass to `init()` must exactly match the class name declared in your `.hxc` file. Class names must be globally unique across all mods and the base game.
+</Tip>
+
+## Further Reading
+
+The official FNF modding documentation provides a full scripting API reference, event type details, and worked examples:
+
+👉 **[funkincrew.github.io/funkin-modding-docs](https://funkincrew.github.io/funkin-modding-docs/)**
+
+<CardGroup cols={2}>
+  <Card title="Modding Overview" icon="map" href="/modding/overview">
+    How Polymod works, security sandbox, and mod load order.
+  </Card>
+  <Card title="Mod Structure" icon="folder-tree" href="/modding/mod-structure">
+    Folder layout, `_polymod_meta.json` schema, and asset override rules.
+  </Card>
+</CardGroup>

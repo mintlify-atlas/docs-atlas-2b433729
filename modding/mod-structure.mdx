@@ -1,0 +1,204 @@
+---
+title: "Mod Structure: Folder Layout and Asset Overrides"
+sidebarTitle: "Mod Structure"
+description: "Learn the required Friday Night Funkin' mod folder layout, the _polymod_meta.json schema, and how Polymod merges mod assets with the base game."
+---
+
+Every Friday Night Funkin' mod is a single self-contained directory placed inside the game's `mods/` folder. Polymod scans that directory at startup, reads the mod's metadata file, and layers the mod's assets on top of the base game — no patching, no executable modification required.
+
+## Required Files
+
+A valid FNF mod must contain at minimum:
+
+| File | Purpose |
+|---|---|
+| `_polymod_meta.json` | Metadata Polymod reads to identify and validate the mod |
+| `_polymod_icon.png` | 16 × 16 or 32 × 32 PNG shown in the in-game mod list |
+
+Polymod will refuse to load a mod that is missing `_polymod_meta.json`, and it will display a placeholder icon if `_polymod_icon.png` is absent.
+
+## `_polymod_meta.json` Schema
+
+```json
+{
+  "title": "My Mod Name",
+  "description": "A short description of what this mod does.",
+  "contributors": [
+    {
+      "name": "YourUsername"
+    }
+  ],
+  "api_version": "0.8.0",
+  "mod_version": "1.0.0",
+  "license": "Apache-2.0"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `title` | `string` | Human-readable name shown in the mod list |
+| `description` | `string` | Short description shown in the mod list |
+| `contributors` | `array` | List of contributor objects; each must have at least a `name` field |
+| `api_version` | `string` | The FNF API version this mod targets — must satisfy `>=0.8.0 <0.9.0` |
+| `mod_version` | `string` | Your mod's own [Semantic Version](https://semver.org/) string |
+| `license` | `string` | [SPDX license identifier](https://spdx.org/licenses/) for the mod's content |
+
+<Note>
+  The `api_version` field is checked against the game's semantic version rule `>=0.8.0 <0.9.0`. Mods that don't satisfy this constraint are skipped with a warning. Always set `api_version` to the version of FNF you tested against.
+</Note>
+
+### Real Example — `testing123` Mod
+
+This is the actual `_polymod_meta.json` from the `example_mods/testing123` mod shipped with the FNF source:
+
+```json
+{
+  "title": "Testing123",
+  "description": "Newgrounds? More like OLDGROUNDS lol.",
+  "contributors": [
+    {
+      "name": "EliteMasterEric"
+    }
+  ],
+  "api_version": "0.8.0",
+  "mod_version": "1.0.0",
+  "license": "Apache-2.0"
+}
+```
+
+## Folder Layout
+
+A typical mod folder looks like this:
+
+```
+📁 mods/
+└── my-mod/
+    ├── _polymod_meta.json      ← required metadata
+    ├── _polymod_icon.png       ← required icon
+    │
+    ├── data/                   ← JSON data overrides
+    │   ├── songs/
+    │   │   └── my-song/
+    │   │       └── my-song.json
+    │   └── characters/
+    │       └── my-character.json
+    │
+    ├── images/                 ← image overrides and additions
+    │   ├── characters/
+    │   │   └── my-character.png
+    │   └── ui/
+    │       └── custom-button.png
+    │
+    ├── songs/                  ← audio files
+    │   └── my-song/
+    │       ├── Inst.ogg
+    │       └── Voices.ogg
+    │
+    └── _module.hxc             ← optional scripted module
+```
+
+The mod folder mirrors the base game's `assets/` directory. Polymod maps every path under your mod folder to the same path in the game's virtual asset tree.
+
+## Asset Overrides
+
+### How Polymod Merges Assets
+
+When the game requests an asset by path (e.g. `images/characters/boyfriend.png`), Polymod checks the enabled mod list **from last to first** (highest to lowest priority). The first mod that provides the file wins; if no mod provides it, the base game asset is used.
+
+```
+Request: images/characters/boyfriend.png
+  → Check mod-3/images/characters/boyfriend.png  ✓ found — use this
+  → (mod-2 and mod-1 are skipped)
+```
+
+This means **lower position in the mod list = lower priority**. You can reorder mods in the in-game Mods menu.
+
+### Image Overrides (`images/`)
+
+Drop a replacement PNG into the same relative path under your mod's `images/` folder:
+
+```
+📁 my-mod/
+└── images/
+    └── characters/
+        └── boyfriend.png   ← replaces assets/images/characters/boyfriend.png
+```
+
+### Data Overrides (`data/`)
+
+JSON data files can be replaced wholesale or **merged** (for JSON objects, Polymod performs a deep merge). Text files with the `.txt` extension use line-append merge by default.
+
+```
+📁 my-mod/
+└── data/
+    └── introText.txt   ← new lines are appended to the base game's introText.txt
+```
+
+<Tip>
+  Prefer **partial merges** over full replacements wherever possible. A full replacement means your mod will conflict with any other mod that also touches the same file, while a partial merge lets both mods coexist.
+</Tip>
+
+### Audio Files (`songs/`)
+
+Audio files (`.ogg`) are placed under `songs/<song-id>/` and referenced by the chart JSON:
+
+```
+📁 my-mod/
+└── songs/
+    └── my-song/
+        ├── Inst.ogg
+        └── Voices.ogg
+```
+
+### Scripts (`*.hxc`)
+
+HScript files (`.hxc`) anywhere in the mod folder are automatically registered as scripted classes by Polymod. The class name in the script must be unique across all mods.
+
+```
+📁 my-mod/
+├── MyModule.hxc           ← registered as a ScriptedModule
+└── characters/
+    └── MyCoolCharacter.hxc  ← registered as a ScriptedCharacter
+```
+
+## Files Ignored by Polymod
+
+The following files and folders are automatically ignored and will never be treated as game assets:
+
+```
+_polymod_meta.json  _polymod_icon.png  _polymod_dir.cfg
+.vscode  .idea  .git  .gitignore  .gitattributes  README.md
+```
+
+You are safe to include a `README.md` or `.gitignore` in your mod folder — they will not interfere with loading.
+
+## Minimal Mod Example
+
+Here is the complete structure of the `introMod` example from the FNF source tree — one of the simplest possible valid mods:
+
+```
+📁 introMod/
+├── _polymod_meta.json
+├── _polymod_icon.png
+└── data/
+    └── introText.txt
+```
+
+Its `_polymod_meta.json`:
+
+```json
+{
+  "title": "Intro Mod",
+  "description": "An introductory mod.",
+  "contributors": [
+    {
+      "name": "EliteMasterEric"
+    }
+  ],
+  "api_version": "0.8.0",
+  "mod_version": "1.0.0",
+  "license": "Apache-2.0"
+}
+```
+
+The `data/introText.txt` file appends new lines to the title screen's intro text — no scripting required.

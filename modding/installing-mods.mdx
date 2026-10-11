@@ -1,0 +1,170 @@
+---
+title: "Installing Mods for Friday Night Funkin' (All Platforms)"
+sidebarTitle: "Installing Mods"
+description: "How to install Friday Night Funkin' mods on Windows, Linux, macOS, Android, and iOS — including where to find the mods folder on each platform."
+---
+
+Installing a mod for Friday Night Funkin' is straightforward: every mod is distributed as a folder (usually inside a ZIP archive) that you place into the game's `mods` directory. The exact location of that directory varies by platform, which is what this guide covers.
+
+<Warning>
+  **HTML5/browser builds do not support mods.** If you are playing FNF in a web browser, mods cannot be loaded. You must install the native desktop or mobile version of the game to use mods.
+</Warning>
+
+<Tabs>
+  <Tab title="Windows">
+    <Steps>
+      <Step title="Run the game once">
+        Launch `Funkin.exe` at least once. The game automatically creates a `mods` folder next to the executable on first run.
+      </Step>
+      <Step title="Locate the mods folder">
+        Open the folder where `Funkin.exe` lives. You will see a `mods` subfolder alongside it:
+
+        ```
+        📁 Friday Night Funkin'
+        ├── Funkin.exe
+        ├── mods/          ← place mod folders here
+        └── ...
+        ```
+      </Step>
+      <Step title="Extract and install the mod">
+        Extract the mod's ZIP file. You should end up with a folder that contains a `_polymod_meta.json` file. Move that **entire folder** into `mods/`:
+
+        ```
+        📁 mods/
+        └── my-cool-mod/
+            ├── _polymod_meta.json
+            ├── _polymod_icon.png
+            └── ...
+        ```
+      </Step>
+      <Step title="Restart the game">
+        Close and relaunch FNF. The mod will be detected automatically.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Linux">
+    <Steps>
+      <Step title="Run the game once">
+        Launch the `Funkin` binary at least once. The game creates a `mods` folder in the same directory as the executable.
+      </Step>
+      <Step title="Locate the mods folder">
+        Open a file manager or terminal and navigate to the directory containing the `Funkin` binary:
+
+        ```bash
+        ls /path/to/FridayNightFunkin/
+        # Funkin  mods/  ...
+        ```
+      </Step>
+      <Step title="Extract and install the mod">
+        Unzip the mod archive and move the mod folder into `mods/`:
+
+        ```bash
+        unzip my-cool-mod.zip -d /path/to/FridayNightFunkin/mods/
+        ```
+      </Step>
+      <Step title="Restart the game">
+        Close and relaunch FNF. The mod will be detected automatically.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="macOS">
+    <Steps>
+      <Step title="Run the game once">
+        Open `Funkin.app` at least once so the game can create the internal `mods` folder.
+      </Step>
+      <Step title="Show Package Contents">
+        In Finder, **right-click** (or Control-click) `Funkin.app` and choose **Show Package Contents**.
+
+
+      </Step>
+      <Step title="Navigate to the mods folder">
+        Inside the package, navigate to:
+
+        ```
+        Contents/Resources/mods/
+        ```
+      </Step>
+      <Step title="Extract and install the mod">
+        Extract the mod's ZIP file and drag the mod folder into `Contents/Resources/mods/`:
+
+        ```
+        📁 Contents/Resources/mods/
+        └── my-cool-mod/
+            ├── _polymod_meta.json
+            └── ...
+        ```
+      </Step>
+      <Step title="Restart the game">
+        Close and relaunch `Funkin.app`. The mod will be detected automatically.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Android">
+    <Steps>
+      <Step title="Run the game once">
+        Open Friday Night Funkin' on your Android device at least once. This creates the `mods` directory in the game's OBB storage.
+      </Step>
+      <Step title="Get a file manager with OBB access">
+        You need a file browser that can reach the Android/obb directory. Options include:
+        - A third-party file manager app that grants access to `Android/obb` (e.g. **Files by Google** or **MiXplorer**)
+        - **Android Studio** → **Device Explorer** (for developers)
+      </Step>
+      <Step title="Locate the mods folder">
+        Navigate to the following path on your device's internal storage:
+
+        ```
+        /sdcard/Android/obb/me.funkin.fnf/mods/
+        ```
+      </Step>
+      <Step title="Copy the mod folder">
+        Extract the mod's ZIP and copy the resulting mod folder into the `mods` directory you found above.
+      </Step>
+      <Step title="Restart the game">
+        [Force-close](https://support.google.com/android/answer/9079646?hl=en) the app if it is still running, then relaunch it. The mod will be detected automatically.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="iOS">
+    <Steps>
+      <Step title="Run the game once">
+        Open Friday Night Funkin' on your iPhone or iPad at least once to let the game create the `mods` folder in its Documents storage.
+      </Step>
+      <Step title="Open the Files app">
+        On your device, open the **Files** app and navigate to:
+
+        **On My iPhone** (or **On My iPad**) → **Friday Night Funkin** → **mods**
+      </Step>
+      <Step title="Copy the mod folder">
+        Download the mod's ZIP and extract it. Move the extracted mod folder into the `mods` directory you located in the previous step.
+
+        <Tip>
+          You can use the built-in unzip support in the iOS Files app — tap and hold a `.zip` file and choose **Uncompress**.
+        </Tip>
+      </Step>
+      <Step title="Restart the game">
+        [Force-close](https://support.apple.com/en-us/109359) Friday Night Funkin' and relaunch it. The mod will be detected automatically.
+      </Step>
+    </Steps>
+  </Tab>
+</Tabs>
+
+<Note>
+  You must **restart the game** after placing a new mod in the `mods` folder. FNF scans for mods only at startup; dropping a folder in while the game is running will not load it until the next launch.
+</Note>
+
+## Managing Mods In-Game
+
+Once a mod is installed you can enable, disable, and reorder mods from the in-game **Mods** menu (accessible from the main menu). Mods are loaded in the order shown in that list — the mod at the **bottom** of the list has the highest priority and will win any file conflicts.
+
+## Troubleshooting
+
+| Issue | Solution |
+|---|---|
+| Mod not appearing in the Mods menu | Ensure the mod folder contains a valid `_polymod_meta.json` and that the `api_version` is compatible (`>=0.8.0 <0.9.0`) |
+| Game crashes on startup after installing a mod | Remove the last mod you added and check the game log for error messages |
+| macOS: can't find the mods folder | Make sure you used **Show Package Contents** on the `.app` bundle, not just opened the app |
+| Android: `/sdcard/Android/obb` not accessible | Some Android 11+ devices restrict access to `Android/obb` from file managers — try using Android Studio's Device Explorer instead |

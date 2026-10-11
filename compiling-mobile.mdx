@@ -1,0 +1,271 @@
+---
+title: "Compiling Friday Night Funkin' for Android and iOS"
+sidebarTitle: "Mobile Builds"
+description: "Step-by-step guide to building Friday Night Funkin' for Android on Windows and macOS, and for iOS on macOS, including SDK, NDK, and JDK setup."
+---
+
+This guide covers everything you need to compile and deploy Friday Night Funkin' to a mobile device. Android builds are supported on both Windows and macOS host machines; iOS builds require macOS.
+
+<Note>
+  **Your desktop build must work before attempting a mobile build.** Complete the [desktop compiling guide](/compiling) first. If the game does not compile on your desktop, do not proceed here.
+</Note>
+
+## Android
+
+<Warning>
+  You **must** use NDK version **`29.0.13113456`**. The latest NDK release is not compatible with FNF's version of Lime. Using any other NDK version will result in build failures.
+</Warning>
+
+<Tabs>
+  <Tab title="Windows">
+
+<Steps>
+
+<Step title="Create an Android Tools Folder">
+Create a new empty folder somewhere on your machine. This folder will hold the Android SDK, NDK, and command-line tools. Note the full path — you will need it throughout this guide.
+
+```
+C:\android-tools\   ← example path, use whatever you prefer
+```
+</Step>
+
+<Step title="Open a Terminal as Administrator">
+Right-click **Command Prompt** or **Windows Terminal** in the Start menu and select **Run as administrator**. This is required to set a machine-wide environment variable.
+</Step>
+
+<Step title="Set the ANDROID_HOME Environment Variable">
+Run the following command, replacing the path with your actual folder from Step 1:
+
+```bash
+setx ANDROID_HOME "C:\android-tools" /M
+```
+
+The `/M` flag sets the variable for all users (system-wide). Close and reopen your terminal after running this command so the change takes effect.
+</Step>
+
+<Step title="Download Android Command-Line Tools">
+Go to the [Android Studio downloads page](https://developer.android.com/studio#command-line-tools-only) and download **Command-line tools only** (not the full Android Studio IDE).
+
+Extract the downloaded ZIP into the folder you created in Step 1. Your folder structure should look like:
+
+```
+C:\android-tools\
+└── cmdline-tools\
+    └── bin\
+        └── sdkmanager.bat
+```
+</Step>
+
+<Step title="Install Required SDK Packages">
+Run `sdkmanager` to install the exact SDK, NDK, and platform packages that FNF requires:
+
+```bash
+sdkmanager --install "build-tools;35.0.0" "ndk;29.0.13113456" "platforms;android-29" "platforms;android-35"
+```
+
+Accept any licence prompts that appear.
+</Step>
+
+<Step title="Install JDK 17">
+Download and install **JDK 17** (MSI installer) from [Adoptium](https://adoptium.net/temurin/releases/?version=17&os=windows).
+
+The default installation path is `C:\Program Files\Java\jdk-17`.
+</Step>
+
+<Step title="Run Lime Android Setup">
+Run the Lime Android configuration wizard:
+
+```bash
+lime setup android
+```
+
+When prompted, provide the following paths (adjust if you used a different folder):
+
+| Prompt | Value |
+|---|---|
+| Android SDK | `C:\android-tools` |
+| Android NDK | `C:\android-tools\ndk\29.0.13113456` |
+| JDK | `C:\Program Files\Java\jdk-17` |
+</Step>
+
+<Step title="Build the Game">
+Compile and deploy to a connected Android device (with USB debugging enabled) or an emulator:
+
+```bash
+lime test android
+```
+</Step>
+
+</Steps>
+
+  </Tab>
+  <Tab title="macOS">
+
+<Steps>
+
+<Step title="Create an Android Tools Folder">
+Create a new empty folder to store Android tools. For example:
+
+```
+/Users/yourname/android-tools/
+```
+
+Note the full path — you will use it throughout this guide.
+</Step>
+
+<Step title="Open Terminal">
+Press **⌘ + Space**, type `terminal`, and press **Enter**.
+</Step>
+
+<Step title="Set Environment Variables">
+Navigate to your Android tools folder and export the required environment variables. Replace the path with your actual folder:
+
+```bash
+cd /path/to/your/folder
+export ANDROID_HOME=/path/to/your/folder
+export PATH=$PATH:$ANDROID_HOME/cmdline-tools:$ANDROID_HOME/cmdline-tools/bin:$ANDROID_HOME/platform-tools
+```
+
+<Note>
+  These `export` commands apply only to the current terminal session. To make them permanent, add the `export` lines to your `~/.zshrc` (or `~/.bashrc`) file.
+</Note>
+</Step>
+
+<Step title="Download Android Command-Line Tools">
+Go to the [Android Studio downloads page](https://developer.android.com/studio#command-line-tools-only) and download **Command-line tools only** for macOS.
+
+Extract the ZIP into the folder you created in Step 1:
+
+```
+/path/to/your/folder/
+└── cmdline-tools/
+    └── bin/
+        └── sdkmanager
+```
+
+Restart Terminal if needed, then re-run the `export` commands from Step 3.
+</Step>
+
+<Step title="Install Required SDK Packages">
+Install the exact packages FNF requires:
+
+```bash
+sdkmanager --install "build-tools;35.0.0" "ndk;29.0.13113456" "platforms;android-29" "platforms;android-35"
+```
+
+Accept any licence prompts that appear.
+</Step>
+
+<Step title="Install JDK 17">
+Download and install **JDK 17** for macOS from [Adoptium](https://adoptium.net/temurin/releases/?os=mac&version=17).
+
+The default installation path is:
+
+```
+/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
+```
+</Step>
+
+<Step title="Run Lime Android Setup">
+Run the Lime Android configuration wizard:
+
+```bash
+lime setup android
+```
+
+When prompted, provide the following paths:
+
+| Prompt | Value |
+|---|---|
+| Android SDK | `/path/to/your/folder` |
+| Android NDK | `/path/to/your/folder/ndk/29.0.13113456` |
+| JDK | `/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home` |
+
+If Lime does not ask for the JDK path, skip that prompt — it can find it automatically on macOS.
+</Step>
+
+<Step title="Build the Game">
+Compile and deploy to a connected Android device (with USB debugging enabled) or an emulator:
+
+```bash
+lime test android
+```
+</Step>
+
+</Steps>
+
+  </Tab>
+</Tabs>
+
+---
+
+## iOS
+
+<Note>
+  iOS builds can **only** be created on a Mac. There is no Windows or Linux path for iOS compilation.
+</Note>
+
+iOS development requires Xcode and an Apple Developer account to deploy to a real physical device. You can use the iOS Simulator without a paid account.
+
+<Steps>
+
+<Step title="Ensure Desktop Build Works">
+Confirm your macOS desktop build compiles successfully before attempting an iOS build. See the [desktop compiling guide](/compiling).
+</Step>
+
+<Step title="Install Xcode">
+Install **Xcode** from the Mac App Store. Launch Xcode after installation and download the **iPhone SDK** (it is the first item that appears in the Xcode welcome dialog).
+</Step>
+
+<Step title="Build for iOS">
+To build and open the project in Xcode (where you sign and deploy the app):
+
+```bash
+lime test ios -xcode
+```
+
+To build for the iOS Simulator instead of a physical device, use the `-simulator` flag:
+
+```bash
+lime test ios -simulator
+```
+</Step>
+
+<Step title="Sign and Deploy (Physical Device)">
+To run the game on a real iOS device you must sign it with your own Apple Developer identity.
+
+1. Open Xcode, press **⌘ ,** to open Settings, select **Accounts**, and add your Apple ID.
+2. In `project.hxp`, change `IOS_TEAM_ID` from `"Z7G7AVNGSH"` to your personal team's ID.
+3. Also change `PACKAGE_NAME` to a unique reverse-domain identifier (e.g. `"com.yourusername.fnf"`), because the official `me.funkin.fnf` bundle identifier is reserved for the official release.
+
+```haxe
+static var IOS_TEAM_ID:String = "YOUR_TEAM_ID_HERE";
+static final PACKAGE_NAME:String = "com.yourusername.fnf";
+```
+</Step>
+
+</Steps>
+
+### iOS Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="A required plugin failed to load. Please ensure system content is up-to-date — try running 'xcodebuild -runFirstLaunch'.">
+    The iOS SDK is not installed. Go back to Step 2 and download the iPhone SDK inside Xcode.
+  </Accordion>
+
+  <Accordion title="error: No Accounts: Add a new account in Accounts settings.">
+    You have not added an Apple ID to Xcode. Open Xcode, press **⌘ ,**, select **Accounts**, and sign in with your Apple ID.
+  </Accordion>
+
+  <Accordion title="error: No Account for Team 'Z7G7AVNGSH'">
+    Xcode cannot find the Funkin' Crew's signing certificate on your machine (expected — you don't have it). Open `project.hxp` and change `IOS_TEAM_ID` to your own personal team ID.
+  </Accordion>
+
+  <Accordion title="error: Failed Registering Bundle Identifier — 'me.funkin.fnf' is not available.">
+    The official bundle identifier is registered exclusively to the Funkin' Crew. Open `project.hxp` and change `PACKAGE_NAME` to a unique value such as `com.yourusername.fnf`.
+  </Accordion>
+
+  <Accordion title="error: No profiles for 'me.funkin.fnf' were found.">
+    Same root cause as the bundle identifier error above. Change `PACKAGE_NAME` in `project.hxp` to a unique reverse-domain string and rebuild.
+  </Accordion>
+</AccordionGroup>

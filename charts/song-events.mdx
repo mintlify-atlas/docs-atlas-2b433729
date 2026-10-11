@@ -1,0 +1,450 @@
+---
+title: "Built-In Song Event Types and Parameters"
+sidebarTitle: "Song Events"
+description: "Reference for every built-in FNF song event: FocusCamera, ZoomCamera, ScrollSpeed, PlayAnimation, SetCameraBop, SetTargetBopSpeed, SetHealthIcon, and scripted events."
+---
+
+Song events are time-stamped instructions embedded in the `events` array of a chart data file. When the Conductor reaches an event's timestamp during gameplay, the matching handler class fires its `handleEvent()` method. Built-in events are registered automatically; mods can add new event kinds by extending `ScriptedSongEvent`.
+
+Each event in the chart data looks like this:
+
+```json
+{
+  "t": 4000,
+  "e": "FocusCamera",
+  "v": { "char": 1 }
+}
+```
+
+- **`t`** — timestamp in milliseconds
+- **`e`** — event kind ID string
+- **`v`** — parameters object (shape is event-specific)
+
+The sections below document every built-in event, its ID string, and all of its parameters.
+
+<Note>
+  By default, an event is skipped if the player jumps forward past it or starts
+  the song mid-way through. Events that need to apply their state regardless —
+  like camera focus — set `processOldEvents: true` internally. You cannot
+  configure this per-instance from the chart file; it is determined by the
+  handler class.
+</Note>
+
+---
+
+## FocusCamera
+
+**Event ID:** `FocusCamera`
+
+Moves the camera so it centers on a character, or snaps it to an arbitrary screen coordinate. Supports a variety of easing functions and directions.
+
+```json
+{
+  "t": 0,
+  "e": "FocusCamera",
+  "v": {
+    "char": 0,
+    "x": 0,
+    "y": 0,
+    "duration": 4,
+    "ease": "CLASSIC",
+    "easeDir": "In"
+  }
+}
+```
+
+<ParamField path="char" type="int (enum)" required>
+  Which target to focus on.
+
+  | Value | Meaning |
+  |---|---|
+  | `-1` | Absolute position — use `x`/`y` directly as world coordinates |
+  | `0` | Player (Boyfriend) — default |
+  | `1` | Opponent (Dad) |
+  | `2` | Girlfriend |
+</ParamField>
+
+<ParamField path="x" type="float">
+  X offset in pixels added on top of the target's camera focus point.
+  When `char` is `-1`, this is the absolute X world coordinate. Default: `0.0`.
+</ParamField>
+
+<ParamField path="y" type="float">
+  Y offset in pixels added on top of the target's camera focus point.
+  When `char` is `-1`, this is the absolute Y world coordinate. Default: `0.0`.
+</ParamField>
+
+<ParamField path="duration" type="float">
+  How many steps the camera tween lasts. Ignored by `INSTANT` and `CLASSIC`
+  easing modes. Default: `4.0`.
+</ParamField>
+
+<ParamField path="ease" type="string (enum)">
+  Easing function used for the camera tween.
+
+  | Value | Behaviour |
+  |---|---|
+  | `CLASSIC` | No tween — instantly sets the follow-point. Ignores duration. Default. |
+  | `INSTANT` | Zero-duration tween (teleports the camera). Ignores duration. |
+  | `linear` | Linear interpolation |
+  | `sine`, `quad`, `cube`, `quart`, `quint`, `expo`, `smoothStep`, `smootherStep`, `elastic`, `back`, `bounce`, `circ` | FlxEase functions |
+</ParamField>
+
+<ParamField path="easeDir" type="string (enum)">
+  Easing direction. Only used when `ease` is not `CLASSIC`, `INSTANT`, or
+  `linear` (which have a built-in direction).
+
+  | Value | Meaning |
+  |---|---|
+  | `In` | Ease in (starts slow) — default |
+  | `Out` | Ease out (ends slow) |
+  | `InOut` | Ease in then out |
+</ParamField>
+
+---
+
+## ZoomCamera
+
+**Event ID:** `ZoomCamera`
+
+Tweens the camera's zoom level to a new value, either relative to the stage zoom or as an absolute zoom factor.
+
+```json
+{
+  "t": 8000,
+  "e": "ZoomCamera",
+  "v": {
+    "zoom": 1.3,
+    "duration": 4,
+    "ease": "linear",
+    "easeDir": "In"
+  }
+}
+```
+
+<ParamField path="zoom" type="float" required>
+  Target zoom level. `1.0` is normal. Values above `1.0` zoom in; values below
+  `1.0` zoom out. Default: `1.0`.
+</ParamField>
+
+<ParamField path="duration" type="float">
+  Tween duration in steps. Default: `4.0`.
+</ParamField>
+
+<ParamField path="ease" type="string (enum)">
+  Easing function. Accepts the same values as `FocusCamera` above, plus
+  `INSTANT` to skip the tween entirely. Default: `linear`.
+</ParamField>
+
+<ParamField path="easeDir" type="string (enum)">
+  Easing direction (`In`, `Out`, `InOut`). Default: `In`.
+</ParamField>
+
+<Expandable title="Advanced parameters">
+  <ParamField path="mode" type="string (enum)">
+    How to interpret the `zoom` value.
+
+    | Value | Meaning |
+    |---|---|
+    | `direct` | Sets the camera to exactly the given zoom level. Default. |
+    | `stage` | Zoom is relative to the current stage zoom rather than absolute. |
+  </ParamField>
+
+  <ParamField path="widescreenScaleX" type="float">
+    Horizontal widescreen compensation factor. Range `0`–`1`. When non-zero,
+    the final zoom is adjusted to account for the user's aspect ratio. Default: `0.0`.
+  </ParamField>
+
+  <ParamField path="widescreenScaleY" type="float">
+    Vertical widescreen compensation factor. Range `0`–`1`. Default: `0.0`.
+  </ParamField>
+</Expandable>
+
+---
+
+## ScrollSpeed
+
+**Event ID:** `ScrollSpeed`
+
+Changes the speed at which notes travel down (or up) the strumlines. By default the value is **multiplied** by the chart's base scroll speed, so `1.0` always results in the chart's intended speed regardless of what that base speed is.
+
+```json
+{
+  "t": 12000,
+  "e": "ScrollSpeed",
+  "v": {
+    "scroll": 1.3,
+    "duration": 4,
+    "ease": "linear"
+  }
+}
+```
+
+<ParamField path="scroll" type="float" required>
+  Target scroll speed multiplier. When `absolute` is `false` (default), this
+  value is multiplied by the chart's base scroll speed. Default: `1.0`.
+</ParamField>
+
+<ParamField path="duration" type="float">
+  Tween duration in steps. Default: `4.0`.
+</ParamField>
+
+<ParamField path="ease" type="string (enum)">
+  Easing function. Accepts the same FlxEase values as `FocusCamera`, plus
+  `INSTANT`. Default: `linear`.
+</ParamField>
+
+<ParamField path="easeDir" type="string (enum)">
+  Easing direction (`In`, `Out`, `InOut`). Default: `In`.
+</ParamField>
+
+<Expandable title="Advanced parameters">
+  <ParamField path="strumline" type="string (enum)">
+    Which strumline(s) to affect.
+
+    | Value | Meaning |
+    |---|---|
+    | `both` | Both player and opponent strumlines. Default. |
+    | `player` | Player strumline only. |
+    | `opponent` | Opponent strumline only. |
+  </ParamField>
+
+  <ParamField path="absolute" type="boolean">
+    When `true`, the `scroll` value is applied as-is without being multiplied
+    by the base scroll speed. Default: `false`.
+  </ParamField>
+</Expandable>
+
+---
+
+## PlayAnimation
+
+**Event ID:** `PlayAnimation`
+
+Forces a named character or stage prop to immediately play a specific animation. Useful for scripted sequences, cutscenes, or special mid-song moments.
+
+```json
+{
+  "t": 16000,
+  "e": "PlayAnimation",
+  "v": {
+    "target": "boyfriend",
+    "anim": "hey",
+    "force": true
+  }
+}
+```
+
+<ParamField path="target" type="string" required>
+  The character or prop to target. Accepts character aliases or arbitrary stage
+  prop names:
+
+  | Value | Target |
+  |---|---|
+  | `boyfriend`, `bf`, `player` | Boyfriend (player character) |
+  | `dad`, `opponent` | Opponent character |
+  | `girlfriend`, `gf` | Girlfriend character |
+  | *(any other string)* | A named stage prop with a matching ID |
+
+  Default: `"boyfriend"`.
+</ParamField>
+
+<ParamField path="anim" type="string" required>
+  The animation name to play, as defined in the character's or prop's animation
+  data. Default: `"idle"`.
+</ParamField>
+
+<ParamField path="force" type="boolean">
+  When `true`, the animation restarts from the beginning even if it is already
+  playing, and the character temporarily skips its automatic idle vocals.
+  Default: `false`.
+</ParamField>
+
+---
+
+## SetCameraBop
+
+**Event ID:** `SetCameraBop`
+
+Configures how aggressively and how often the camera pulses to the beat. Useful for dropping or intensifying the camera-bop effect at key moments in a song.
+
+```json
+{
+  "t": 0,
+  "e": "SetCameraBop",
+  "v": {
+    "intensity": 1.0,
+    "rate": 4,
+    "offset": 0
+  }
+}
+```
+
+<ParamField path="intensity" type="float">
+  A multiplier for the default bop zoom amount. `1.0` is the original intensity;
+  `2.0` doubles the zoom amount; `0.0` disables zooming entirely. Default
+  matches the engine constant `DEFAULT_BOP_INTENSITY`.
+</ParamField>
+
+<ParamField path="rate" type="float">
+  How often the camera bops, measured in beats per bop. `1` bops every beat;
+  `4` bops once every four beats (the default feel). Default matches the engine
+  constant `DEFAULT_ZOOM_RATE`.
+</ParamField>
+
+<ParamField path="offset" type="float">
+  A beat offset that shifts when within the bar the bop triggers. Measured in
+  beats. Default matches the engine constant `DEFAULT_ZOOM_OFFSET`.
+</ParamField>
+
+<Tip>
+  Sending an empty `v` object (`{}`) resets all three fields to their engine
+  defaults, which is a clean way to restore the original camera bop after a
+  modified section.
+</Tip>
+
+---
+
+## SetTargetBopSpeed
+
+**Event ID:** `SetTargetBopSpeed`
+
+Changes how often a specific character or stage prop dances (their idle-bop rate). Characters and Boppers animate at `danceEvery` beats; this event overrides that value at runtime.
+
+```json
+{
+  "t": 0,
+  "e": "SetTargetBopSpeed",
+  "v": {
+    "target": "boyfriend",
+    "rate": 2.0
+  }
+}
+```
+
+<ParamField path="target" type="string" required>
+  The character or prop to target. Uses the same alias system as `PlayAnimation`:
+  `boyfriend`/`bf`/`player`, `dad`/`opponent`, `girlfriend`/`gf`, or any named
+  stage prop. Default: `"boyfriend"`.
+</ParamField>
+
+<ParamField path="rate" type="float">
+  New dance interval in beats. `1.0` means the target dances every beat; `2.0`
+  means every two beats. Default matches the engine constant `DEFAULT_PROP_RATE`.
+  Units: beats/dance.
+</ParamField>
+
+---
+
+## SetHealthIcon
+
+**Event ID:** `SetHealthIcon`
+
+Replaces the health bar icon for the player or the opponent mid-song. Supports per-icon scale, flip, pixel-art mode, and positional offsets.
+
+```json
+{
+  "t": 20000,
+  "e": "SetHealthIcon",
+  "v": {
+    "char": 1,
+    "id": "tankman-bloody",
+    "shouldBop": true,
+    "scale": 1.0,
+    "flipX": false
+  }
+}
+```
+
+<ParamField path="char" type="int (enum)" required>
+  Which health icon to replace.
+
+  | Value | Meaning |
+  |---|---|
+  | `0` | Player icon (P1). Default. |
+  | `1` | Opponent icon (P2). |
+</ParamField>
+
+<ParamField path="id" type="string" required>
+  The health icon asset ID to use. The game loads the icon graphic from the
+  `healthIcons` asset folder using this ID. Default: the engine constant
+  `DEFAULT_HEALTH_ICON`.
+</ParamField>
+
+<ParamField path="shouldBop" type="boolean">
+  Whether the icon should bop when health changes. Default: `true`.
+</ParamField>
+
+<ParamField path="scale" type="float">
+  Uniform scale multiplier for the icon sprite. Default: `1.0`.
+</ParamField>
+
+<ParamField path="flipX" type="boolean">
+  Horizontally flips the icon sprite. Default: `false`.
+</ParamField>
+
+<Expandable title="Advanced parameters">
+  <ParamField path="isPixel" type="boolean">
+    When `true`, the icon uses nearest-neighbor (pixel-art) scaling instead of
+    bilinear interpolation. Default: `false`.
+  </ParamField>
+
+  <ParamField path="offsetX" type="float">
+    Horizontal pixel offset applied after positioning. Default: `0.0`.
+  </ParamField>
+
+  <ParamField path="offsetY" type="float">
+    Vertical pixel offset applied after positioning. Default: `0.0`.
+  </ParamField>
+</Expandable>
+
+---
+
+## ScriptedSongEvent
+
+**Event ID:** *(custom — defined by the mod)*
+
+Mods can register completely custom event kinds by creating a Haxe (or HScript) class that extends `SongEvent` and is discovered at runtime through the `ScriptedSongEvent` system. When the engine encounters an event kind that does not match any built-in handler, it looks for a matching scripted handler registered by a loaded mod.
+
+```json
+{
+  "t": 32000,
+  "e": "MyModEvent",
+  "v": {
+    "someParam": "hello"
+  }
+}
+```
+
+<Warning>
+  Custom events are mod-specific. A chart that relies on `ScriptedSongEvent`
+  handlers will behave differently (or do nothing for those events) when played
+  without the mod that provides those handlers. Always document which mod is
+  required when distributing such a chart.
+</Warning>
+
+Custom event classes must override at least `handleEvent(data:SongEventData)` and `getEventSchema()`. Optionally override `getTitle()` and `getIconPath()` to customise the Chart Editor's display.
+
+```haxe
+class MyModEvent extends SongEvent {
+  public function new() {
+    super('MyModEvent');
+  }
+
+  override public function handleEvent(data:SongEventData):Void {
+    var someParam:String = data.getString('someParam');
+    trace('MyModEvent fired with: $someParam');
+  }
+
+  override public function getEventSchema():SongEventSchema {
+    return new SongEventSchema([
+      {
+        name: 'someParam',
+        title: 'Some Parameter',
+        defaultValue: 'hello',
+        type: SongEventFieldType.STRING
+      }
+    ]);
+  }
+}
+```

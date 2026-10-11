@@ -1,0 +1,209 @@
+---
+title: "User Preferences & Settings Reference for FNF"
+sidebarTitle: "Preferences"
+description: "Full reference for every user-configurable setting in Preferences.hx — display, gameplay, audio, accessibility, and platform-specific options with defaults."
+---
+
+Friday Night Funkin' stores all user-configurable settings through the `Preferences` class (`funkin.Preferences`), a collection of static `get/set` properties that read from and write to `Save.instance` automatically. Every setter calls `Save.system.flush()` to persist the value immediately — no explicit "save" step is required.
+
+```haxe
+// Reading a preference
+var fps:Int = Preferences.framerate;
+
+// Writing a preference — auto-saved
+Preferences.downscroll = true;
+```
+
+`Preferences.init()` is called once at startup to apply persisted values to the engine (e.g. setting `FlxG.autoPause`, configuring the debug overlay, and capping the framerate).
+
+---
+
+## Display Settings
+
+<ResponseField name="framerate" type="Int" default="60">
+  Target frames per second for the game loop and renderer.
+
+  - **Web**: Always locked to `60`; the setter is a no-op.
+  - **Mobile**: Always locked to the display's refresh rate (minimum `60`). The setter is a no-op.
+  - **Desktop**: Reads from and writes to `Save.instance.options.framerate`. Applies immediately via `FlxG.updateFramerate` / `FlxG.drawFramerate` unless `unlockedFramerate` is enabled.
+</ResponseField>
+
+<ResponseField name="unlockedFramerate" type="Bool" default="false">
+  When `true`, removes the framerate cap entirely (sets both flixel framerate fields to `0`).
+
+  - **Web / Mobile**: Always `false`; the setter is a no-op.
+  - **Desktop only**.
+</ResponseField>
+
+<ResponseField name="vsyncMode" type="String (enum)" default='"Off"'>
+  Controls vertical synchronisation. Accepted string values: `"Off"`, `"On"`, `"Adaptive"`. Maps internally to `lime.ui.WindowVSyncMode`.
+
+  - **Web / Mobile**: Always `OFF`; the setter is a no-op.
+  - **Desktop only**.
+</ResponseField>
+
+<ResponseField name="flashingLights" type="Bool" default="true">
+  When `false`, reduces the intensity of flashing-light effects in the main menu, results screen, and certain in-game events. Recommended for players with photosensitivity concerns.
+</ResponseField>
+
+<ResponseField name="zoomCamera" type="Bool" default="true">
+  When `true`, the game camera performs a subtle zoom-pulse on every beat. Disable for a cleaner visual experience or to reduce motion.
+</ResponseField>
+
+<ResponseField name="strumlineBackgroundOpacity" type="Int (0–100)" default="0">
+  Opacity percentage of the semi-transparent black rectangle drawn behind the note lanes. `0` = fully transparent (no background), `100` = fully opaque solid black.
+</ResponseField>
+
+<ResponseField name="naughtyness" type="Bool" default="true">
+  When `true`, allows the display of certain mature/explicit language and content in the game. Can be disabled at compile time with the `NO_FEATURE_NAUGHTYNESS` define, which hard-codes the value to `false`.
+</ResponseField>
+
+<ResponseField name="subtitles" type="Bool" default="true">
+  When `true`, subtitles appear during songs that have dialogue cutscenes and certain vocal moments.
+</ResponseField>
+
+<ResponseField name="autoFullscreen" type="Bool" default="true">
+  When `true`, the game launches in fullscreen automatically on startup.
+</ResponseField>
+
+---
+
+## Gameplay Settings
+
+<ResponseField name="downscroll" type="Bool" default="false (true on mobile)">
+  When `true`, the strumline receptors are positioned at the **bottom** of the screen and notes scroll upward. When `false` (the default on desktop/web), receptors are at the top and notes fall downward.
+
+  <Note>
+    The mobile default is `true` because downscroll is more natural for touchscreen play.
+  </Note>
+</ResponseField>
+
+<ResponseField name="autoPause" type="Bool" default="true">
+  When `true`, `FlxG.autoPause` is enabled and the game pauses automatically when the window loses focus (e.g. alt-tabbing).
+
+  - **Mobile**: Always `false`; the setter is a no-op.
+</ResponseField>
+
+<ResponseField name="globalOffset" type="Int (ms)" default="0">
+  A user-defined timing offset in **milliseconds** applied to all input judgements via `Conductor.instance.combinedOffset`. Increase this value if notes feel like they need to be hit earlier; decrease (use a negative value) if they feel late.
+
+  This offset stacks with the per-chart `instrumentalOffset` and the file-format `formatOffset`.
+</ResponseField>
+
+---
+
+## Audio Settings
+
+<ResponseField name="audioVisualOffset" type="Int (ms)" default="0">
+  An offset (in milliseconds) that shifts the visual display of notes relative to the audio. Intended to compensate for display lag rather than input lag. Currently marked as "unused" in the source but is stored in save data and read by `Conductor.instance.audioVisualOffset`.
+</ResponseField>
+
+<Warning>
+  `audioVisualOffset` is distinct from `globalOffset`. `globalOffset` shifts **when inputs are judged**; `audioVisualOffset` is intended to shift **when notes are drawn**. Use `globalOffset` for typical audio-device latency compensation.
+</Warning>
+
+---
+
+## Debug & Developer Settings
+
+<ResponseField name="debugDisplay" type="DebugDisplayMode" default='"Off"'>
+  Controls the on-screen FPS/RAM debug overlay. Accepted values: `"Off"`, `"On"` (basic FPS + memory), `"Advanced"` (expanded metrics).
+
+  - Disabled at compile time with the `NO_FEATURE_DEBUG_DISPLAY` define.
+  - Release mobile builds always disable this.
+</ResponseField>
+
+<ResponseField name="debugDisplayBGOpacity" type="Int (0–100)" default="50">
+  Opacity percentage of the debug overlay's background panel. Only relevant when `debugDisplay` is not `"Off"`.
+</ResponseField>
+
+<ResponseField name="enabledDiscordRPC" type="Bool" default="true">
+  When `true` and compiled with `FEATURE_DISCORD_RPC`, the game connects to Discord Rich Presence and updates your activity status with the current song/menu.
+</ResponseField>
+
+---
+
+## Screenshot Settings
+
+These settings are nested under `Save.instance.options.screenshot`.
+
+<ResponseField name="shouldHideMouse" type="Bool" default="true">
+  When `true`, the mouse cursor is hidden from the captured image when taking an in-game screenshot.
+</ResponseField>
+
+<ResponseField name="fancyPreview" type="Bool" default="true">
+  When `true`, a stylised animated preview of the screenshot is displayed after capture.
+</ResponseField>
+
+<ResponseField name="previewOnSave" type="Bool" default="true">
+  When `true`, the fancy preview is only shown **after** the screenshot file has been successfully saved to disk, rather than immediately on capture.
+</ResponseField>
+
+---
+
+## Haptics Settings (Mobile)
+
+<ResponseField name="hapticsMode" type="HapticsMode" default='"All"'>
+  Controls which events trigger haptic (vibration) feedback. Accepted values:
+
+  | Value | Behaviour |
+  |-------|-----------|
+  | `"All"` | Haptics fire on notes and menu interactions |
+  | `"Notes Only"` | Haptics fire only on note hits during gameplay |
+  | `"None"` | All haptic feedback disabled |
+</ResponseField>
+
+<ResponseField name="hapticsIntensityMultiplier" type="Float" default="1.0">
+  A multiplier applied to the intensity of all haptic feedback effects. `1.0` is the baseline; increase for stronger vibrations, decrease toward `0.0` for subtler feedback.
+</ResponseField>
+
+---
+
+## Mobile-Only Settings
+
+<ResponseField name="screenTimeout" type="Bool" default="false">
+  When `true`, allows the device's screen to dim and lock automatically according to the OS timeout. When `false` (default), the game keeps the screen awake. Maps to `lime.system.System.allowScreenTimeout`.
+</ResponseField>
+
+<ResponseField name="controlsScheme" type="String" default='"4 Lanes" (FunkinHitboxControlSchemes.Arrows)'>
+  The on-screen hitbox layout used on mobile. Controls how the four note directions are mapped to touchscreen zones. Available schemes are defined in `FunkinHitboxControlSchemes`.
+</ResponseField>
+
+---
+
+## How Preferences Are Persisted
+
+Every `Preferences` setter writes through to `Save.instance` and flushes immediately:
+
+```haxe
+// Example: how downscroll is stored (simplified from Preferences.hx)
+static function set_downscroll(value:Bool):Bool
+{
+  var save:Save = Save.instance;
+  save.options.downscroll = value;
+  Save.system.flush(); // writes to FlxSave / local storage
+  return value;
+}
+```
+
+`Save.instance` is a wrapper around HaxeFlixel's `FlxSave` system. On desktop it writes to a binary save file; on web it uses `localStorage`; on mobile it uses the platform's equivalent persistent storage.
+
+<Tip>
+  Call `Preferences.init()` after constructing `Save.instance` during boot to re-apply all stored settings to the running engine. This is already done by the game's `Main.hx`, but modded code that resets the save file should call it again.
+</Tip>
+
+---
+
+## Platform Summary
+
+| Setting | Desktop | Web | Mobile |
+|---------|---------|-----|--------|
+| `framerate` | Configurable | Always 60 | Always display refresh rate |
+| `unlockedFramerate` | Configurable | Always `false` | Always `false` |
+| `vsyncMode` | Configurable | Always `OFF` | Always `OFF` |
+| `downscroll` | Default `false` | Default `false` | Default `true` |
+| `autoPause` | Configurable | Configurable | Always `false` |
+| `hapticsMode` | N/A | N/A | Configurable |
+| `hapticsIntensityMultiplier` | N/A | N/A | Configurable |
+| `screenTimeout` | N/A | N/A | Configurable |
+| `controlsScheme` | N/A | N/A | Configurable |

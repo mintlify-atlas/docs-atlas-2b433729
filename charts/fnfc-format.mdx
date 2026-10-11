@@ -1,0 +1,121 @@
+---
+title: "FNFC File Format: ZIP Structure and Versioning"
+sidebarTitle: "FNFC Format"
+description: "Complete overview of the .fnfc chart bundle format: its ZIP structure, required and optional files, manifest schema, and semantic versioning."
+---
+
+Friday Night Funkin' chart packages use the `.fnfc` extension — a standard ZIP archive that bundles every asset the Chart Editor needs to represent a complete song in a single portable file. Because the archive is a plain ZIP, any tool that can read ZIP files can inspect and extract its contents without any special software. The Chart Editor uses FNFC files for **export and import only**; the game itself stores individual `metadata.json`, `chart.json`, and `.ogg` files on disk and never reads the FNFC container at runtime.
+
+<Note>
+  The game does **not** store songs as FNFC files internally. FNFC is a
+  Charter Editor transport format ideal for sharing charts between collaborators,
+  since it bundles note data **and** audio into one file.
+</Note>
+
+## What Is a Variation?
+
+Before diving into the file list, it helps to understand _variations_. A variation is a named group of difficulties that share the same song events, characters, stage, and audio tracks. Difficulties within a variation (such as Easy, Normal, and Hard) share identical event timing; only the notes differ.
+
+When a difficulty needs fundamentally different events or music — for example, the Erect and Nightmare difficulties in the base game — it belongs to a separate variation (conventionally named `erect`). Each variation has its own metadata and chart files stored inside the archive. The `default` variation's metadata file is the authoritative source that advertises which other variations exist through its `playData.songVariations` array.
+
+## File Versions
+
+Every component file carries its own [Semantic Version](https://semver.org/) string. Non-breaking additions increment the minor component (`1.x.0`); breaking changes increment the major component (`x.0.0`).
+
+| Component file | Current version |
+|---|---|
+| `manifest.json` | `1.0.0` |
+| `<songid>-metadata.json` | `2.2.2` |
+| `<songid>-chart.json` | `2.0.0` |
+
+## Archive File List
+
+The table below lists every possible file that can appear inside a valid `.fnfc` archive. Files marked **required** must be present; the game considers an archive without them invalid.
+
+| File | Required | Description |
+|---|---|---|
+| `manifest.json` | ✅ Required | Minimal header: schema version and song ID. |
+| `Inst.ogg` | ✅ Required | Instrumental audio for the `default` variation. |
+| `Inst-<instid>.ogg` | Optional | An alternate instrumental referenced by `playData.characters.instrumental` in a variation's metadata. |
+| `Voices-<charid>.ogg` | Optional | Per-character vocal track for the `default` variation. The game loads the player and opponent vocal files automatically. |
+| `Voices-<charid>-<variation>.ogg` | Optional | Per-character vocal track for a named alternate variation. |
+| `<songid>-metadata.json` | ✅ Required | Song metadata for the `default` variation (version `2.2.2`). |
+| `<songid>-metadata-<variation>.json` | Optional | Song metadata for each alternate variation listed in `playData.songVariations`. |
+| `<songid>-chart.json` | ✅ Required | Note and event data for the `default` variation (version `2.0.0`). |
+| `<songid>-chart-<variation>.json` | Optional | Note and event data for each alternate variation. |
+
+<Note>
+  Replace `<songid>` with the song's ID string (e.g. `dadbattle`), `<charid>` with a
+  character ID (e.g. `bf` or `dad`), `<instid>` with an instrumental ID, and
+  `<variation>` with the variation name (e.g. `erect`).
+</Note>
+
+## manifest.json
+
+`manifest.json` is the only file the Chart Editor parses before deciding how to read the rest of the archive. Keeping it minimal means the parser can cheaply validate an archive and resolve the correct filenames without loading any audio or note data.
+
+### Fields
+
+<ParamField path="version" type="string" required>
+  Semantic Version string for the manifest schema. Must be `"1.0.0"` for the
+  current format.
+</ParamField>
+
+<ParamField path="songId" type="string" required>
+  The song ID used to resolve all other filenames inside the archive. For
+  example, a `songId` of `"dadbattle"` means the chart editor will look for
+  `dadbattle-metadata.json`, `dadbattle-chart.json`, and so on.
+</ParamField>
+
+### Example
+
+```json
+{
+  "version": "1.0.0",
+  "songId": "dadbattle"
+}
+```
+
+<Note>
+  Some tools add a `generatedBy` field to manifest and metadata files. This
+  field is intended **only** for debugging — the game does not read it during
+  gameplay. Custom engines should set a unique value in `Constants.hx` so
+  issues can be traced back to the tool that produced the file.
+</Note>
+
+## Audio Files
+
+All audio files inside a `.fnfc` archive must use the **OGG container format** with the **Vorbis audio codec** (`.ogg`). No other audio formats are supported.
+
+### Inst.ogg
+
+The primary instrumental backing track. This file is **mandatory**; an archive without it is considered corrupt and will be rejected by the Chart Editor.
+
+### Inst-\<instid\>.ogg
+
+An alternate instrumental track. The variation's metadata file specifies which alternate instrumental to use via the `playData.characters.instrumental` key. If no alternate instrumental is referenced, this file is not required.
+
+### Voices-\<charid\>.ogg
+
+A per-character vocal stem for the default variation. The game independently loads the player's and opponent's vocal tracks using the character IDs specified in `playData.characters.player` and `playData.characters.opponent`. Missing vocal files are silently ignored — the song will still play without them.
+
+### Voices-\<charid\>-\<variation\>.ogg
+
+The same as above but scoped to a named variation. A file named `Voices-bf-erect.ogg`, for example, contains Boyfriend's vocals for the `erect` variation.
+
+## Loading Order
+
+When the Chart Editor opens a `.fnfc` file it follows this sequence:
+
+1. Read `manifest.json` to obtain `songId`.
+2. Load `<songId>-metadata.json` (default variation metadata).
+3. Read `playData.songVariations` to discover alternate variations.
+4. For each variation, load `<songId>-metadata-<variation>.json` and `<songId>-chart-<variation>.json`.
+5. Load `<songId>-chart.json` (default variation chart data).
+6. Load audio files as needed.
+
+<Tip>
+  Because metadata is parsed before chart data, the game can display songs in
+  Freeplay menus while keeping the heavier note arrays unloaded until the
+  player actually starts a song.
+</Tip>

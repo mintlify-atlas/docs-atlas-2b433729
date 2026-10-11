@@ -1,0 +1,236 @@
+---
+title: "Scoring Systems, Judgements & Ranks in FNF"
+sidebarTitle: "Scoring"
+description: "Complete reference for FNF's three scoring systems (PBOT1, LEGACY, WEEK7), note judgement windows, miss penalties, and how end-of-song ranks are calculated."
+---
+
+Every note hit in Friday Night Funkin' passes through the `Scoring` static class (`funkin.play.scoring.Scoring`), which converts a millisecond timing offset into both a **point value** and a **judgement label**. Three independent scoring systems are available, selectable via the `ScoringSystem` enum. The default system — and the one used for all ranked play — is `PBOT1`.
+
+## The `ScoringSystem` Enum
+
+```haxe
+// funkin/play/scoring/Scoring.hx
+enum abstract ScoringSystem(String)
+{
+  /** Week 6 and older — step function based on judgement window. */
+  public var LEGACY;
+
+  /** Week 7 — same hit window as LEGACY but with tighter thresholds. */
+  public var WEEK7;
+
+  /** Points Based On Timing v1 — sigmoid curve, default for current builds. */
+  public var PBOT1;
+}
+```
+
+---
+
+## Scoring System Comparison
+
+| Property | LEGACY | WEEK7 | PBOT1 |
+|---|---|---|---|
+| **Hit window** | ~166.7 ms (10 frames @ 60 fps) | ~166.7 ms | 160 ms |
+| **Score type** | Step function | Step function | Sigmoid curve |
+| **Max score (Sick)** | 350 | 350 | 500 |
+| **Miss penalty** | −10 | −10 | −100 |
+| **Sick threshold** | 20% of window (~33 ms) | 20% of window (~33 ms) | 45 ms |
+| **Good threshold** | 75% of window (~125 ms) | 55% of window (~92 ms) | 90 ms |
+| **Bad threshold** | 90% of window (~150 ms) | 80% of window (~133 ms) | 135 ms |
+| **Shit threshold** | 100% of window (~167 ms) | 100% of window (~167 ms) | 160 ms |
+
+<Note>
+  All timing values are based on the **absolute** millisecond offset — early and late hits are treated symmetrically.
+</Note>
+
+---
+
+## PBOT1 — Default Scoring System
+
+PBOT1 (*Points Based On Timing, version 1*) awards a score between `9` and `500` points per note using a **sigmoid (logistic) function**. Notes hit within `5 ms` of perfect always receive the maximum 500 points; notes outside the 160 ms window are counted as misses.
+
+### Constants
+
+```haxe
+// funkin/play/scoring/Scoring.hx
+public static final PBOT1_MAX_SCORE:Int         = 500;
+public static final PBOT1_MIN_SCORE:Float       = 9.0;
+public static final PBOT1_MISS_SCORE:Int        = -100;
+public static final PBOT1_PERFECT_THRESHOLD:Float = 5.0;   // ≤5 ms → always 500
+public static final PBOT1_MISS_THRESHOLD:Float  = 160.0;   // >160 ms → miss
+
+// Sigmoid parameters
+public static final PBOT1_SCORING_OFFSET:Float  = 54.99;
+public static final PBOT1_SCORING_SLOPE:Float   = 0.080;
+
+// Judgement thresholds
+public static final PBOT1_KILLER_THRESHOLD:Float = 12.5;  // reserved, currently unused
+public static final PBOT1_SICK_THRESHOLD:Float   = 45.0;
+public static final PBOT1_GOOD_THRESHOLD:Float   = 90.0;
+public static final PBOT1_BAD_THRESHOLD:Float    = 135.0;
+public static final PBOT1_SHIT_THRESHOLD:Float   = 160.0;
+```
+
+### Sigmoid Formula
+
+```haxe
+// Simplified from scoreNotePBOT1()
+var factor:Float = 1.0 - (1.0 / (1.0 + Math.exp(-PBOT1_SCORING_SLOPE * (absTiming - PBOT1_SCORING_OFFSET))));
+var score:Int    = Std.int(PBOT1_MAX_SCORE * factor + PBOT1_MIN_SCORE);
+```
+
+The sigmoid starts near `500` for very early hits, decays steeply through the middle of the window, and floors at `9` just before the miss threshold. This rewards tighter timing continuously rather than in discrete steps.
+
+---
+
+## LEGACY — Classic Scoring
+
+Used in Week 6 and all earlier content. A pure step function: the score depends entirely on which judgement bucket the hit falls in.
+
+### Constants
+
+```haxe
+public static final LEGACY_HIT_WINDOW:Float    = (10 / 60) * 1000; // ~166.67 ms
+public static final LEGACY_SICK_THRESHOLD:Float  = 0.20;
+public static final LEGACY_GOOD_THRESHOLD:Float  = 0.75;
+public static final LEGACY_BAD_THRESHOLD:Float   = 0.90;
+public static final LEGACY_SHIT_THRESHOLD:Float  = 1.00;
+
+public static final LEGACY_SICK_SCORE:Int  = 350;
+public static final LEGACY_GOOD_SCORE:Int  = 200;
+public static final LEGACY_BAD_SCORE:Int   = 100;
+public static final LEGACY_SHIT_SCORE:Int  = 50;
+public static final LEGACY_MISS_SCORE:Int  = -10;
+```
+
+A Sick hit requires landing within the first **20%** of the 166.67 ms window (≤ ~33 ms). Anything past 100% of the window is a miss.
+
+---
+
+## WEEK7 — Week 7 Scoring
+
+WEEK7 uses the same overall 166.67 ms hit window as LEGACY but applies tighter threshold percentages for Good and Bad judgements, making it a closer match to the original Week 7 experience.
+
+```haxe
+public static final WEEK7_HIT_WINDOW:Float    = LEGACY_HIT_WINDOW; // ~166.67 ms
+public static final WEEK7_SICK_THRESHOLD:Float  = 0.20; // ~33 ms
+public static final WEEK7_GOOD_THRESHOLD:Float  = 0.55; // ~92 ms  (tighter than LEGACY's 0.75)
+public static final WEEK7_BAD_THRESHOLD:Float   = 0.80; // ~133 ms (tighter than LEGACY's 0.90)
+
+public static final WEEK7_SICK_SCORE:Int  = 350;
+public static final WEEK7_GOOD_SCORE:Int  = 200;
+public static final WEEK7_BAD_SCORE:Int   = 100;
+public static final WEEK7_SHIT_SCORE:Int  = 50;
+public static final WEEK7_MISS_SCORE:Int  = -10;
+```
+
+---
+
+## API Reference
+
+### `Scoring.scoreNote`
+
+```haxe
+public static function scoreNote(msTiming:Float, scoringSystem:ScoringSystem = PBOT1):Int
+```
+
+Returns the integer point value for a note hit with the given millisecond timing offset. Positive values mean the player hit early; negative values mean late. Pass a `ScoringSystem` enum value to override the default `PBOT1`.
+
+### `Scoring.judgeNote`
+
+```haxe
+public static function judgeNote(msTiming:Float, scoringSystem:ScoringSystem = PBOT1):String
+```
+
+Returns one of the following judgement strings based on the same timing offset:
+
+| String | PBOT1 | LEGACY | WEEK7 |
+|--------|-------|--------|-------|
+| `"sick"` | ≤ 45 ms | ≤ 33 ms | ≤ 33 ms |
+| `"good"` | ≤ 90 ms | ≤ 125 ms | ≤ 92 ms |
+| `"bad"` | ≤ 135 ms | ≤ 150 ms | ≤ 133 ms |
+| `"shit"` | ≤ 160 ms | ≤ 167 ms | ≤ 167 ms |
+| `"miss"` | > 160 ms | > 167 ms | > 167 ms |
+
+### `Scoring.getMissScore`
+
+```haxe
+public static function getMissScore(scoringSystem:ScoringSystem = PBOT1):Int
+```
+
+Returns the penalty applied to the score when a note is missed (`-100` for PBOT1, `-10` for LEGACY/WEEK7).
+
+---
+
+## Judgements
+
+Judgements are the visual feedback labels shown above the strumline on each note hit. The current five active judgements are:
+
+<CardGroup cols={2}>
+  <Card title="Sick ✦" icon="star">
+    Best timing. Triggers the animated "Sick!" splash on the strumline receptor. Full score.
+  </Card>
+  <Card title="Good" icon="thumbs-up">
+    Acceptable timing. Reduced score; no splash.
+  </Card>
+  <Card title="Bad" icon="triangle-exclamation">
+    Late or early but still within window. Low score; health loss.
+  </Card>
+  <Card title="Shit" icon="skull">
+    Just barely inside the window. Minimal score; significant health loss.
+  </Card>
+</CardGroup>
+
+<Warning>
+  A **Miss** (no hit registered before the note leaves the window) deals heavy health damage and applies `getMissScore()` as a score penalty. It does **not** count as a hit for completion purposes.
+</Warning>
+
+---
+
+## End-of-Song Ranks
+
+After a song ends, `PlayState` collects tally data (`SaveScoreTallyData`) and passes it to `Scoring.calculateRank()` to determine the animated result screen rank.
+
+### `Scoring.calculateRank`
+
+```haxe
+public static function calculateRank(scoreData:Null<SaveScoreData>):Null<ScoringRank>
+```
+
+The **completion amount** is computed first:
+
+```haxe
+// tallyCompletion — the key formula
+return ((tallies.sick + tallies.good - tallies.missed) / tallies.totalNotes).clamp(0, 1);
+```
+
+That value is then mapped to a `ScoringRank`:
+
+| Rank | `ScoringRank` | Condition |
+|------|---------------|-----------|
+| 🌟 **Perfect (Gold)** | `PERFECT_GOLD` | Every note is a Sick (`sick == totalNotes`) |
+| ✨ **Perfect** | `PERFECT` | Completion = 1.00 (100%) |
+| 🏆 **Excellent** | `EXCELLENT` | Completion ≥ 0.90 |
+| 🎉 **Great** | `GREAT` | Completion ≥ 0.80 |
+| 👍 **Good** | `GOOD` | Completion ≥ 0.60 |
+| 💀 **Loss** | `SHIT` | Completion < 0.60 |
+
+### `ScoringRank` Enum
+
+```haxe
+// funkin/play/scoring/Scoring.hx
+enum abstract ScoringRank(String)
+{
+  public var PERFECT_GOLD;  // All-Sick Full Clear
+  public var PERFECT;       // 100% completion
+  public var EXCELLENT;     // ≥90%
+  public var GREAT;         // ≥80%
+  public var GOOD;          // ≥60%
+  public var SHIT;          // <60%
+}
+```
+
+Ranks support `>`, `>=`, `<`, and `<=` comparison operators for leaderboard and high-score comparisons. The `PERFECT_GOLD` rank triggers a special golden animation on the results screen distinct from the standard `PERFECT` animation.
+
+<Tip>
+  The **Freeplay** screen shows small rank icons next to previously played songs. These are derived from `ScoringRank.getFreeplayRankIconAsset()` and use the same `ScoringRank` values stored in `Save.instance`.
+</Tip>

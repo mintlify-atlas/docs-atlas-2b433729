@@ -1,0 +1,177 @@
+---
+title: "Chart Data JSON Schema Reference (v2.0.0)"
+sidebarTitle: "Chart Data"
+description: "Complete reference for the FNF chart data JSON format: notes, scroll speeds, song events, variations, and the full SongNoteData and SongEventData schemas."
+---
+
+The chart data file (`<songid>-chart.json`) stores the note and event data for one variation of a song. It is deliberately kept separate from the metadata file so the game can load song listings cheaply at startup and defer the heavier note arrays until a player actually selects a chart. The current schema version is **2.0.0**. Alternate-variation charts follow an identical structure and are named `<songid>-chart-<variation>.json`.
+
+## Top-Level Fields
+
+<ParamField path="version" type="string" required>
+  Semantic Version string for the chart data schema. Current value: `"2.0.0"`.
+</ParamField>
+
+<ParamField path="notes" type="object" required>
+  A map of difficulty ID → array of `SongNoteData` objects. Each key (e.g.
+  `"easy"`, `"normal"`, `"hard"`) matches a difficulty listed in the
+  corresponding metadata file's `playData.difficulties` array. Notes are
+  typically stored in chronological order but the parser does not require it.
+</ParamField>
+
+<ParamField path="scrollSpeed" type="object" required>
+  A map of difficulty ID → float representing the base note scroll speed
+  multiplier for that difficulty. A value of `1.0` is the default speed; `2.5`
+  would send notes flying at two-and-a-half times normal. The `ScrollSpeed`
+  song event can override this at runtime.
+</ParamField>
+
+<ParamField path="events" type="SongEventData[]" required>
+  An array of `SongEventData` objects that apply to **all difficulties** in
+  this variation. Events are evaluated at the timestamp defined in each object.
+  See [SongEventData](#songeventdata) below.
+</ParamField>
+
+<ParamField path="generatedBy" type="string" required>
+  Identifies the tool that wrote this file. Read-only from the game's
+  perspective — never used during gameplay.
+</ParamField>
+
+---
+
+## SongNoteData
+
+Each element of a difficulty's note array is a `SongNoteData` object describing a single tap note or hold note.
+
+<ParamField path="t" type="float" required>
+  Timestamp of the note in milliseconds, using the same time format declared in
+  the metadata (`"ms"`).
+</ParamField>
+
+<ParamField path="d" type="int" required>
+  Lane index encoding both the direction and the strumline. For a standard
+  four-key chart:
+
+  | Value | Direction | Strumline |
+  |---|---|---|
+  | `0` | LEFT | Player (BF) |
+  | `1` | DOWN | Player (BF) |
+  | `2` | UP | Player (BF) |
+  | `3` | RIGHT | Player (BF) |
+  | `4` | LEFT | Opponent (Dad) |
+  | `5` | DOWN | Opponent (Dad) |
+  | `6` | UP | Opponent (Dad) |
+  | `7` | RIGHT | Opponent (Dad) |
+
+  The formula is `direction = d % strumlineSize` (default 4) and
+  `strumline = floor(d / strumlineSize)`.
+</ParamField>
+
+<ParamField path="l" type="float">
+  Hold duration in milliseconds. A value of `0` (or omitting this field)
+  indicates a tap note. Any positive value turns the note into a hold note
+  (sometimes called a sustain). Defaults to `0`.
+</ParamField>
+
+<ParamField path="k" type="string">
+  Note kind identifier. `null` or an empty string means a standard note. Custom
+  note kinds (e.g. `"mine"`, `"heal"`) can be registered by mods using the
+  `NoteKind` system. Defaults to `null`.
+</ParamField>
+
+<ParamField path="p" type="NoteParamData[]">
+  An array of key/value parameter pairs used by custom note kinds. Each entry
+  has a `n` (name, string) and `v` (value, any JSON type) field. Defaults to
+  an empty array.
+</ParamField>
+
+---
+
+## SongEventData
+
+The `events` array at the top level of the chart file contains `SongEventData` objects. Events fire at specific timestamps and are shared across all difficulties in a variation — if you need per-difficulty events, use separate variations.
+
+<ParamField path="t" type="float" required>
+  Timestamp in milliseconds at which the event fires.
+</ParamField>
+
+<ParamField path="e" type="string" required>
+  Event kind identifier. Built-in values include `"FocusCamera"`,
+  `"ZoomCamera"`, `"ScrollSpeed"`, `"PlayAnimation"`, `"SetCameraBop"`,
+  `"SetTargetBopSpeed"`, and `"SetHealthIcon"`. Mods can register additional
+  event kinds via `ScriptedSongEvent`.
+</ParamField>
+
+<ParamField path="v" type="object | number | string | boolean">
+  The parameters for this event. The shape depends on the event kind. Refer to
+  the [Song Events](/charts/song-events) reference for each event's parameter
+  schema. Defaults to `null`.
+</ParamField>
+
+---
+
+## Variations
+
+When a song has an `erect` variation (or any other named variation), the Chart Editor writes a second chart file — `dadbattle-chart-erect.json` — that follows the exact same schema. The `erect` chart file is completely independent of the default chart file: it has its own `notes` map, its own `scrollSpeed` map, and its own `events` array. The metadata file's `playData.songVariations` field is what links the two files together.
+
+<Note>
+  A difficulty name can appear in both the default variation and an alternate
+  variation if the metadata files for each variation declare it in their own
+  `playData.difficulties` arrays. The game presents them as the same difficulty
+  slot but loads whichever chart and metadata file corresponds to the active
+  variation.
+</Note>
+
+---
+
+## Example
+
+Below is a minimal but complete chart file illustrating notes across two difficulties and a camera-focus event.
+
+```json
+{
+  "version": "2.0.0",
+  "generatedBy": "FunkinChartEditor",
+  "scrollSpeed": {
+    "easy": 1.0,
+    "hard": 2.0
+  },
+  "notes": {
+    "easy": [
+      { "t": 1333, "d": 0, "l": 0 },
+      { "t": 2000, "d": 3, "l": 0 },
+      { "t": 2666, "d": 1, "l": 666 }
+    ],
+    "hard": [
+      { "t": 1333, "d": 0, "l": 0 },
+      { "t": 1666, "d": 2, "l": 0 },
+      { "t": 2000, "d": 3, "l": 0 },
+      { "t": 2333, "d": 1, "l": 0 },
+      { "t": 2666, "d": 1, "l": 666 },
+      { "t": 3000, "d": 4, "l": 0 }
+    ]
+  },
+  "events": [
+    {
+      "t": 0,
+      "e": "FocusCamera",
+      "v": { "char": 1 }
+    },
+    {
+      "t": 4000,
+      "e": "FocusCamera",
+      "v": { "char": 0 }
+    }
+  ]
+}
+```
+
+In the `hard` difficulty the note at `t: 3000, d: 4` is an opponent LEFT note — `floor(4 / 4) = 1` puts it on the opponent's strumline, and `4 % 4 = 0` makes its direction LEFT.
+
+The `events` array contains two `FocusCamera` events: one at the very start of the song (`t: 0`) focusing the camera on the opponent (`char: 1`), and a second at 4 seconds (`t: 4000`) refocusing on the player (`char: 0`). Both difficulties experience these events at exactly the same moments.
+
+<Tip>
+  Always sort notes by timestamp before writing the file. Although the engine
+  can handle unsorted data, sorted arrays make chart editing tools and diff
+  tools significantly easier to use.
+</Tip>
